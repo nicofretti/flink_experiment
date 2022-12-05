@@ -1,0 +1,24 @@
+version: "3.7"
+# image: flink:latest
+# image: pyflink/pyflink:1.11.0
+# image: pyflink/playgrounds:1.13.0-rc2
+services:
+  flink-jobmanager:
+    image: pyflink/playgrounds:1.13.0-rc2
+    entrypoint: ["/docker-entrypoint.sh", "jobmanager"]
+    container_name: flink-jobmanager
+    ports:
+      - "8081:8081"
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    volumes:
+      - ./src:/opt/flink/src
+
+  flink-taskmanager:
+    image: pyflink/playgrounds:1.13.0-rc2
+    entrypoint: ["/docker-entrypoint.sh", "taskmanager"]
+    container_name: flink-taskmanager
+    depends_on:
+      - flink-jobmanager
+    environment:
+      - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager

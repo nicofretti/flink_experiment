@@ -1,6 +1,5 @@
-import sys
 from pyflink.table import (EnvironmentSettings, TableEnvironment, TableDescriptor, Schema,
-                           DataTypes, FormatDescriptor)
+                           DataTypes)
 
 if __name__ == "__main__":
     file_path = "./datasets/up_07.csv"
