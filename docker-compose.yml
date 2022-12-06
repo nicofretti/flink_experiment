@@ -4,7 +4,8 @@ version: "3.7"
 # image: pyflink/playgrounds:1.13.0-rc2
 services:
   flink-jobmanager:
-    image: pyflink/playgrounds:1.13.0-rc2
+    build:
+      dockerfile: Dockerfile
     entrypoint: ["/docker-entrypoint.sh", "jobmanager"]
     container_name: flink-jobmanager
     ports:
@@ -15,7 +16,8 @@ services:
       - ./src:/opt/flink/src
 
   flink-taskmanager:
-    image: pyflink/playgrounds:1.13.0-rc2
+    build:
+      dockerfile: Dockerfile
     entrypoint: ["/docker-entrypoint.sh", "taskmanager"]
     container_name: flink-taskmanager
     depends_on:
