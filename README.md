@@ -8,7 +8,7 @@ docker-compose up
 ```
 Now we have to access to the `jobmanager` container running the following command in a new terminal:
 ```bash
-docker exec -it jobmanager /bin/bash
+docker exec -it flink-jobmanager /bin/bash
 ```
 It's time to run the first job. The docker infrastructure is created to add a volume from `src/` of the current directory. So, we can run the following command:
 ```bash
