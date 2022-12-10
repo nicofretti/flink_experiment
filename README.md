@@ -14,3 +14,7 @@ It's time to run the first job. The docker infrastructure is created to add a vo
 ```bash
 ./src/run_file.sh
 ```
+
+### References
+- [Apache Flink](https://nightlies.apache.org/flink/flink-docs-master/)
+- [Wikipedia Sentences](https://www.kaggle.com/datasets/mikeortman/wikipedia-sentences)
