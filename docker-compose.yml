@@ -27,6 +27,8 @@ services:
       - flink-jobmanager
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
+    volumes:
+      - ./src:/opt/flink/src
 #    networks:
 #      flink-network:
 #        ipv4_address: 10.5.0.6

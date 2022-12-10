@@ -42,15 +42,16 @@ def split(line: Row):
 
 
 if __name__ == "__main__":
-    file_path = "file:///opt/flink/src/datasets/wikisent2.txt"
+    file_path = "file:///opt/flink/src/datasets/task.txt"
     t_env = TableEnvironment.create(EnvironmentSettings.in_batch_mode())
     t_env.get_config().set("parallelism.default", "1")
     # Create source table
     source_table = create_source_table(t_env, 'source', file_path)
     # Create sink table, we can refer to it later using the name `sink`
-    create_sink_table(t_env, 'sink', 'file:////home/nicof/Desktop/univr/flink_experiment/src/output')
+    create_sink_table(t_env, 'sink', 'file:////opt/flink/src')
     # Executing word count
-    source_table.group_by(col("sentence")) \
-        .select(col("sentence").alias("world"), lit(1).alias("count")) \
-        .execute_insert("sink") \
+    source_table.flat_map(split).alias('word') \
+        .group_by(col('word')) \
+        .select(col('word'), lit(1).count) \
+        .execute_insert('sink') \
         .wait()
