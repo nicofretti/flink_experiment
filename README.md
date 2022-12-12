@@ -17,4 +17,4 @@ It's time to run the first job. The docker infrastructure is created to add a vo
 
 ### References
 - [Apache Flink](https://nightlies.apache.org/flink/flink-docs-master/)
-- [Wikipedia Sentences](https://www.kaggle.com/datasets/mikeortman/wikipedia-sentences)
+- [Quotes - 500k](https://www.kaggle.com/datasets/manann/quotes-500k)

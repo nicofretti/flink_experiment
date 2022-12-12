@@ -12,13 +12,12 @@ def create_source_table(env, table_name, input_path):
         table_name,
         TableDescriptor.for_connector('filesystem')
         .schema(Schema.new_builder()
-                .column('sentence_id', DataTypes.STRING())
-                .column('episode_id', DataTypes.STRING())
-                .column('season', DataTypes.STRING())
-                .column('episode', DataTypes.STRING())
-                .column('sentence', DataTypes.STRING())
+                .column('quote', DataTypes.STRING())
+                .column('author', DataTypes.STRING())
+                .column('age', DataTypes.STRING())
                 .build())
         .option('path', input_path)
+        .option('csv.field-delimiter', ';')
         .format('csv')
         .build()
     )
@@ -28,14 +27,17 @@ def create_source_table(env, table_name, input_path):
 
 @udtf(result_types=[DataTypes.STRING()])
 def split(line: Row):
-    # 4-th element of the row is the sentence
-    for s in line[4].split():
+    # 0-th element of the row is the quote
+    for s in line[0].split():
+        s = s.lower()
+        for char in ['"', ',', ';', '.', '?', '!', '(', ')', ':']:  # Remove punctuation
+            s = s.replace(char, '')
         yield Row(s)
 
 
 if __name__ == "__main__":
     # Define files path from the current directory
-    file_input = "datasets/sentences.csv"
+    file_input = "datasets/quotes_all.csv"
     file_output = "output/result.csv"
     # Get the current directory
     current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -49,6 +51,6 @@ if __name__ == "__main__":
     # Executing the word count
     source_table.flat_map(split).alias('word') \
         .group_by(col('word')) \
-        .select(col('word'), lit(1).count) \
+        .select(col('word'), lit(1).count.alias('count')) \
+        .order_by(col('count').desc) \
         .to_pandas().to_csv(os.path.join(current_dir, file_output), index=False, header=False)
-    #source_table.to_pandas().to_csv(os.path.join(current_dir, file_output), index=False, header=False)
