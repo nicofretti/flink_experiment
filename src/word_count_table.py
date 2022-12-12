@@ -14,10 +14,10 @@ def create_source_table(env, table_name, input_path):
         .schema(Schema.new_builder()
                 .column('quote', DataTypes.STRING())
                 .column('author', DataTypes.STRING())
-                .column('age', DataTypes.STRING())
+                .column('type', DataTypes.STRING())
                 .build())
         .option('path', input_path)
-        .option('csv.field-delimiter', ';')
+        .option('csv.field-delimiter', ',')
         .format('csv')
         .build()
     )
@@ -37,7 +37,7 @@ def split(line: Row):
 
 if __name__ == "__main__":
     # Define files path from the current directory
-    file_input = "datasets/quotes_all.csv"
+    file_input = "datasets/Quotes_data.csv"
     file_output = "output/result.csv"
     # Get the current directory
     current_dir = os.path.dirname(os.path.realpath(__file__))
