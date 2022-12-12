@@ -18,11 +18,11 @@ apt-get clean && \
 rm -rf /var/lib/apt/lists/*
 
 # Copy the plugin jar to the Flink plugins directory
-RUN mkdir -p /opt/flink/plugins/flink-csv-1.16.0
-COPY ./plugins/flink-csv-1.16.0.jar /opt/flink/plugins/flink-csv-1.16.0
+# COPY ./plugins/flink-csv-1.16.0.jar /opt/flink/opt/
+#COPY ./plugins/flink-connector-files-1.16.0.jar /opt/flink/opt/
 
 # Copy the requirements
-# COPY requirements.txt /opt/requirements.txt
-# RUN pip3 install --upgrade pip && pip3 install -r /opt/requirements.txt
+COPY requirements.txt /opt/requirements.txt
+RUN pip3 install --upgrade pip && pip3 install -r /opt/requirements.txt
 
 # sudo apt-get install -y liblzma-dev
