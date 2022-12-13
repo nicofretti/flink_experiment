@@ -1,11 +1,17 @@
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.7/runpy.py", line 193, in _run_module_as_main
+    "__main__", mod_spec)
+  File "/usr/local/lib/python3.7/runpy.py", line 85, in _run_code
+    exec(code, run_globals)
+  File "/opt/flink/src/main.py", line 25, in <module>
+    source=FileSource.for_record_stream_format(CsvReaderFormat.for_schema(csv_input_schema), input_path).build(),
+  File "/opt/flink/opt/python/pyflink.zip/pyflink/datastream/formats/csv.py", line 324, in for_schema
+    if len(items) == 1 and items[0][0] == 0:
+  File "/opt/flink/opt/python/py4j-0.10.9.3-src.zip/py4j/java_gateway.py", line 1322, in __call__
+  File "/opt/flink/opt/python/pyflink.zip/pyflink/util/exceptions.py", line 146, in deco
+  File "/opt/flink/opt/python/py4j-0.10.9.3-src.zip/py4j/protocol.py", line 328, in get_return_value
 py4j.protocol.Py4JJavaError: An error occurred while calling z:org.apache.flink.formats.csv.PythonCsvUtils.createCsvReaderFormat.
-: java.lang.IllegalAccessError:
-class org.apache.flink.formats.csv.PythonCsvUtils tried to access method
-'void org.apache.flink.formats.csv.CsvReaderFormat.<init>(org.apache.flink.util.function.SerializableSupplier,
-org.apache.flink.util.function.SerializableFunction, java.lang.Class, org.apache.flink.formats.common.Converter,
-org.apache.flink.api.common.typeinfo.TypeInformation, boolean)'
-(org.apache.flink.formats.csv.PythonCsvUtils is in unnamed module of loader org.apache.flink.util.ChildFirstClassLoader @e383572;
-org.apache.flink.formats.csv.CsvReaderFormat is in unnamed module of loader 'app')
+: java.lang.IllegalAccessError: class org.apache.flink.formats.csv.PythonCsvUtils tried to access method 'void org.apache.flink.formats.csv.CsvReaderFormat.<init>(org.apache.flink.util.function.SerializableSupplier, org.apache.flink.util.function.SerializableFunction, java.lang.Class, org.apache.flink.formats.common.Converter, org.apache.flink.api.common.typeinfo.TypeInformation, boolean)' (org.apache.flink.formats.csv.PythonCsvUtils is in unnamed module of loader org.apache.flink.util.ChildFirstClassLoader @e383572; org.apache.flink.formats.csv.CsvReaderFormat is in unnamed module of loader 'app')
         at org.apache.flink.formats.csv.PythonCsvUtils.createCsvReaderFormat(PythonCsvUtils.java:48)
         at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
         at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)

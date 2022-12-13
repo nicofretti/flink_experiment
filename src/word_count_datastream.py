@@ -23,7 +23,7 @@ if __name__ == "__main__":
     # Init environment
     d_env = StreamExecutionEnvironment.get_execution_environment()
     d_env.set_runtime_mode(RuntimeExecutionMode.BATCH)
-
+    d_env.set_parallelism(1)
     # Read from csv file
     csv_input_schema = CsvSchema.builder() \
         .add_string_column("author") \

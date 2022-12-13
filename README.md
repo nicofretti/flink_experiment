@@ -18,3 +18,4 @@ It's time to run the first job. The docker infrastructure is created to add a vo
 ### References
 - [Apache Flink](https://nightlies.apache.org/flink/flink-docs-master/)
 - [QUOTES.csv](https://www.kaggle.com/datasets/coolcoder22/quotes-dataset)
+- [Answare](https://stackoverflow.com/questions/72829965/flink-python-datastream-api-kafka-consumer-noclassdeffounderror-bytearraydeser)
