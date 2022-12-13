@@ -21,6 +21,9 @@ rm -rf /var/lib/apt/lists/*
 # COPY ./plugins/flink-csv-1.16.0.jar /opt/flink/opt/
 #COPY ./plugins/flink-connector-files-1.16.0.jar /opt/flink/opt/
 
+# Copy plugins
+# COPY ./plugins /opt/flink/src/plugins
+
 # Copy the requirements
 COPY requirements.txt /opt/requirements.txt
 RUN pip3 install --upgrade pip && pip3 install -r /opt/requirements.txt

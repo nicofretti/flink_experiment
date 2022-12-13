@@ -1,0 +1,20 @@
+py4j.protocol.Py4JJavaError: An error occurred while calling z:org.apache.flink.formats.csv.PythonCsvUtils.createCsvReaderFormat.
+: java.lang.IllegalAccessError:
+class org.apache.flink.formats.csv.PythonCsvUtils tried to access method
+'void org.apache.flink.formats.csv.CsvReaderFormat.<init>(org.apache.flink.util.function.SerializableSupplier,
+org.apache.flink.util.function.SerializableFunction, java.lang.Class, org.apache.flink.formats.common.Converter,
+org.apache.flink.api.common.typeinfo.TypeInformation, boolean)'
+(org.apache.flink.formats.csv.PythonCsvUtils is in unnamed module of loader org.apache.flink.util.ChildFirstClassLoader @e383572;
+org.apache.flink.formats.csv.CsvReaderFormat is in unnamed module of loader 'app')
+        at org.apache.flink.formats.csv.PythonCsvUtils.createCsvReaderFormat(PythonCsvUtils.java:48)
+        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(Unknown Source)
+        at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
+        at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+        at org.apache.flink.api.python.shaded.py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+        at org.apache.flink.api.python.shaded.py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)
+        at org.apache.flink.api.python.shaded.py4j.Gateway.invoke(Gateway.java:282)
+        at org.apache.flink.api.python.shaded.py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+        at org.apache.flink.api.python.shaded.py4j.commands.CallCommand.execute(CallCommand.java:79)
+        at org.apache.flink.api.python.shaded.py4j.GatewayConnection.run(GatewayConnection.java:238)
+        at java.base/java.lang.Thread.run(Unknown Source)

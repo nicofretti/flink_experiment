@@ -12,7 +12,10 @@ services:
       - "8081:8081"
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
-      - ENABLE_BUILT_IN_PLUGINS=flink-connector-files-1.16.0.jar
+      - |
+        FLINK_PROPERTIES=
+          taskmanager.numberOfTaskSlots: 5
+      # - ENABLE_BUILT_IN_PLUGINS=flink-connector-files-1.16.0.jar
     volumes:
       - ./src:/opt/flink/src
 #    networks:
@@ -28,7 +31,10 @@ services:
       - flink-jobmanager
     environment:
       - JOB_MANAGER_RPC_ADDRESS=flink-jobmanager
-      - ENABLE_BUILT_IN_PLUGINS=flink-connector-files-1.16.0.jar
+      - |
+        FLINK_PROPERTIES=
+          taskmanager.numberOfTaskSlots: 5
+      # - ENABLE_BUILT_IN_PLUGINS=flink-connector-files-1.16.0.jar
     volumes:
       - ./src:/opt/flink/src
 #    networks:
