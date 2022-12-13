@@ -34,7 +34,7 @@ services:
       - |
         FLINK_PROPERTIES=
           taskmanager.numberOfTaskSlots: 5
-      # - ENABLE_BUILT_IN_PLUGINS=flink-connector-files-1.16.0.jar
+      # - ENABLE_BUILT_IN_PLUGINS=flink-csv-1.16.0.jar
     volumes:
       - ./src:/opt/flink/src
 #    networks:

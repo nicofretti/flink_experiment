@@ -12,9 +12,8 @@ def create_source_table(env, table_name, input_path):
         table_name,
         TableDescriptor.for_connector('filesystem')
         .schema(Schema.new_builder()
-                .column('quote', DataTypes.STRING())
                 .column('author', DataTypes.STRING())
-                .column('type', DataTypes.STRING())
+                .column('quote', DataTypes.STRING())
                 .build())
         .option('path', input_path)
         .option('csv.field-delimiter', ',')
@@ -27,8 +26,8 @@ def create_source_table(env, table_name, input_path):
 
 @udtf(result_types=[DataTypes.STRING()])
 def split(line: Row):
-    # 0-th element of the row is the quote
-    for s in line[0].split():
+    # 1-th element of the row is the quote
+    for s in line[1].split():
         s = s.lower()
         for char in ['"', ',', ';', '.', '?', '!', '(', ')', ':']:  # Remove punctuation
             s = s.replace(char, '')
@@ -37,7 +36,7 @@ def split(line: Row):
 
 if __name__ == "__main__":
     # Define files path from the current directory
-    file_input = "datasets/Quotes_data.csv"
+    file_input = "datasets/QUOTE.csv"
     file_output = "output/result.csv"
     # Get the current directory
     current_dir = os.path.dirname(os.path.realpath(__file__))
