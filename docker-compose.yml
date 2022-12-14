@@ -18,6 +18,7 @@ services:
       # - ENABLE_BUILT_IN_PLUGINS=flink-connector-files-1.16.0.jar
     volumes:
       - ./src:/opt/flink/src
+      - ./src/data_expo_queries/build/libs/:/opt/flink/data_expo_queries
 #    networks:
 #      flink-network:
 #        ipv4_address: 10.5.0.5
@@ -37,6 +38,7 @@ services:
       # - ENABLE_BUILT_IN_PLUGINS=flink-csv-1.16.0.jar
     volumes:
       - ./src:/opt/flink/src
+      - ./src/data_expo_queries/build/libs/:/opt/flink/data_expo_queries
 #    networks:
 #      flink-network:
 #        ipv4_address: 10.5.0.6

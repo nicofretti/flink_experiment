@@ -36,7 +36,7 @@ def split(line: Row):
 
 if __name__ == "__main__":
     # Define files path from the current directory
-    file_input = "datasets/QUOTE.csv"
+    file_input = "../datasets/QUOTE.csv"
     file_output = "output/result.csv"
     # Get the current directory
     current_dir = os.path.dirname(os.path.realpath(__file__))

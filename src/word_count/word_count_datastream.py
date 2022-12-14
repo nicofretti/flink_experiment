@@ -18,8 +18,8 @@ if __name__ == "__main__":
     # Init current directory
     current_dir = os.path.dirname(os.path.realpath(__file__))
     # Init input and output path
-    input_path = os.path.join(current_dir, "datasets/QUOTE.csv")
-    output_path = os.path.join(current_dir, "output/")
+    input_path = os.path.join(current_dir, "../datasets/QUOTE.csv")
+    output_path = os.path.join(current_dir, "../output/")
     # Init environment
     d_env = StreamExecutionEnvironment.get_execution_environment()
     d_env.set_runtime_mode(RuntimeExecutionMode.BATCH)

@@ -1,0 +1,94 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
+
+group 'org.data.expo'
+version '.1-SNAPSHOT'
+
+mainClassName = 'org.data.expo.Main'
+
+ext {
+    javaVersion = '1.8'
+    flinkVersion = '1.16.0'
+    scalaBinaryVersion = '_2.12'
+    slf4jVersion = '1.7.32'
+    log4jVersion = '2.17.1'
+}
+
+sourceCompatibility = javaVersion
+targetCompatibility = javaVersion
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+applicationDefaultJvmArgs = ["-Dlog4j.configurationFile=log4j2.properties"]
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://repository.apache.org/content/repositories/snapshots"
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
+}
+
+configurations {
+    flinkShadowJar // dependencies which go into the shadowJar
+    // always exclude these (also from transitive dependencies) since they are provided by Flink
+    flinkShadowJar.exclude group: 'org.apache.flink', module: 'force-shading'
+    flinkShadowJar.exclude group: 'com.google.code.findbugs', module: 'jsr305'
+    flinkShadowJar.exclude group: 'org.slf4j'
+    flinkShadowJar.exclude group: 'org.apache.logging.log4j'
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    // --------------------------------------------------------------
+    // Compile-time dependencies that should NOT be part of the
+    // shadow (uber) jar and are provided in the lib folder of Flink
+    // --------------------------------------------------------------
+    implementation "org.apache.flink:flink-streaming-java:${flinkVersion}"
+    implementation "org.apache.flink:flink-clients:${flinkVersion}"
+    // --------------------------------------------------------------
+    // Dependencies that should be part of the shadow jar, e.g.
+    // connectors. These must be in the flinkShadowJar configuration!
+    // --------------------------------------------------------------
+    //flinkShadowJar "org.apache.flink:flink-connector-kafka:${flinkVersion}"
+    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:${log4jVersion}"
+    runtimeOnly "org.apache.logging.log4j:log4j-api:${log4jVersion}"
+    runtimeOnly "org.apache.logging.log4j:log4j-core:${log4jVersion}"
+    // Add test dependencies here.
+    // testCompile "junit:junit:4.12"
+    // flinkShadowJar "org.apache.flink:flink-connector-kafka:${flinkVersion}"
+}
+
+// make compileOnly dependencies available for tests:
+sourceSets {
+    main.compileClasspath += configurations.flinkShadowJar
+    main.runtimeClasspath += configurations.flinkShadowJar
+    test.compileClasspath += configurations.flinkShadowJar
+    test.runtimeClasspath += configurations.flinkShadowJar
+    javadoc.classpath += configurations.flinkShadowJar
+}
+run.classpath = sourceSets.main.runtimeClasspath
+
+jar {
+    manifest {
+        attributes 'Built-By': System.getProperty('user.name'),
+                'Build-Jdk': System.getProperty('java.version')
+    }
+}
+
+application {
+    mainClass.set(mainClassName)
+}
+
+shadowJar {
+    configurations = [project.configurations.flinkShadowJar]
+}
+
