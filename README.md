@@ -1,7 +1,7 @@
 # Flink-experiment
  My first project using Apache Flink, a distributed stream processing framework.
 
-### How to run
+### How to run with Docker
 At first we need to start the Flink cluster, for this we can use the following command:
 ```bash
 docker-compose up
@@ -17,5 +17,4 @@ It's time to run the first job. The docker infrastructure is created to add a vo
 
 ### References
 - [Apache Flink](https://nightlies.apache.org/flink/flink-docs-master/)
-- [QUOTES.csv](https://www.kaggle.com/datasets/coolcoder22/quotes-dataset)
-- [Answare](https://stackoverflow.com/questions/72829965/flink-python-datastream-api-kafka-consumer-noclassdeffounderror-bytearraydeser)
+- Dataset word_count [QUOTES.csv](https://www.kaggle.com/datasets/coolcoder22/quotes-dataset)

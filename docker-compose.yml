@@ -1,7 +1,4 @@
 version: "3.7"
-# image: flink:latest
-# image: pyflink/pyflink:1.11.0
-# image: pyflink/playgrounds:1.13.0-rc2
 services:
   flink-jobmanager:
     build:
@@ -16,6 +13,8 @@ services:
         FLINK_PROPERTIES=
           taskmanager.numberOfTaskSlots: 5
       # - ENABLE_BUILT_IN_PLUGINS=flink-connector-files-1.16.0.jar
+    extra_hosts:
+        - "host.docker.internal:host-gateway"
     volumes:
       - ./src:/opt/flink/src
       - ./src/data_expo_queries/build/libs/:/opt/flink/data_expo_queries
@@ -35,7 +34,8 @@ services:
       - |
         FLINK_PROPERTIES=
           taskmanager.numberOfTaskSlots: 5
-      # - ENABLE_BUILT_IN_PLUGINS=flink-csv-1.16.0.jar
+    extra_hosts:
+        - "host.docker.internal:host-gateway"
     volumes:
       - ./src:/opt/flink/src
       - ./src/data_expo_queries/build/libs/:/opt/flink/data_expo_queries

@@ -1,3 +1,4 @@
 apache-flink==1.16.0
 apache-flink-libraries==1.16.0
 pyflink==1.0
+pwntools==4.8.0
