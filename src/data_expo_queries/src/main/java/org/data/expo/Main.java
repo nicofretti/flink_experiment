@@ -27,9 +27,9 @@ public class Main {
     public static void main(String[] args) throws Exception {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
+        // host.docker.internal
         DataStream<Tuple2<String, Integer>> dataStream = env
-                .socketTextStream("host.docker.internal", 8888)
+                .socketTextStream("localhost", 8888)
                 .flatMap(new Splitter())
                 .keyBy(value -> value.f0)
                 .window(TumblingProcessingTimeWindows.of(Time.seconds(5)))
