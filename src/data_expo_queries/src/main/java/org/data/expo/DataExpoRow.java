@@ -1,5 +1,8 @@
 package org.data.expo;
 
+import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
+import org.apache.flink.streaming.api.windowing.windows.Window;
+
 public class DataExpoRow {
     // Year,Month,DayofMonth,DayOfWeek,DepTime,CRSDepTime,ArrTime,CRSArrTime,UniqueCarrier,FlightNum,
     // TailNum,ActualElapsedTime,CRSElapsedTime,AirTime,ArrDelay,DepDelay,Origin,Dest,Distance,TaxiIn,
@@ -75,11 +78,12 @@ public class DataExpoRow {
         this.weather_delay = Integer.parseInt(row_split[25]);
         this.nas_delay = Integer.parseInt(row_split[26]);
         this.security_delay = Integer.parseInt(row_split[27]);
-        this.late_aircraft_delay = Integer.parseInt(row_split[28]);
+        //this.late_aircraft_delay = Integer.parseInt(row_split[28]);
     }
 
     @Override
     public String toString() {
         return String.format("(%d/%d/%d) %s -> %s,%d,%d", year, month, day_of_month, origin, dest, dep_delay, arr_delay);
     }
+
 }
