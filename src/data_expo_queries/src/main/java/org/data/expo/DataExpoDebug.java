@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class DataExpoDebug {
+     /// Class to use during the development of the data expo project
+
+     /// A list of a possible input
      static ArrayList<String> example = new ArrayList<>(
         Arrays.asList(
             "2005,1,28,5,1603,1605,1741,1759,UA,541,N935UA,158,174,131,-18,-2,BOS,ORD,867,4,23,0,,0,0,0,0,0,0",
@@ -510,7 +513,8 @@ public class DataExpoDebug {
             "2005,1,12,3,846,805,1012,910,UA,559,N902UA,146,125,113,62,41,MDT,ORD,594,6,27,0,,0,41,0,21,0,0")
      );
 
-
+     // Trigger for the windows that count the number element in the window and when the max is reached, it will trigger
+     // the window
      static class CountTrigger<T> extends org.apache.flink.streaming.api.windowing.triggers.Trigger<T, Window> {
           private final int max;
           private int count_occurrences = 0;
