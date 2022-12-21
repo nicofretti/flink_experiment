@@ -155,4 +155,5 @@ src/output/
 src/data_expo_queries/.gradle/
 src/data_expo_queries/.idea/
 src/data_expo_queries/build/
+src/data_expo_queries/output/
 *.hprof

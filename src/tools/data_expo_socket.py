@@ -5,7 +5,7 @@ import pwn
 
 if __name__ == "__main__":
     files = ["../datasets/2005.csv", "../datasets/2006.csv"]
-    batch_size = 1000
+    batch_size = 500
     current_dir = os.path.dirname(os.path.realpath(__file__))
     # Init server
     server = pwn.listen(8888)
@@ -21,9 +21,8 @@ if __name__ == "__main__":
                 rows += f.readline()
             client.send(rows.encode())
             rows = f.readline()
-            time.sleep(5)
             count+=1
+            time.sleep(2)
             print("SEND")
-    time.sleep(10)
     client.close()
     server.close()
