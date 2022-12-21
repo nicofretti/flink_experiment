@@ -16,6 +16,7 @@
  */
 
 package org.data.expo;
+
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -23,31 +24,29 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.util.Collector;
+
 public class Main {
-    public static void main(String[] args) throws Exception {
+  public static void main(String[] args) throws Exception {
 
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        // host.docker.internal
-        DataStream<Tuple2<String, Integer>> dataStream = env
-                .socketTextStream("localhost", 8888)
-                .flatMap(new Splitter())
-                .keyBy(value -> value.f0)
-                .window(TumblingProcessingTimeWindows.of(Time.seconds(5)))
-                .sum(1);
+    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+    // host.docker.internal
+    DataStream<Tuple2<String, Integer>> dataStream =
+        env.socketTextStream("localhost", 8888)
+            .flatMap(new Splitter())
+            .keyBy(value -> value.f0)
+            .window(TumblingProcessingTimeWindows.of(Time.seconds(5)))
+            .sum(1);
+    dataStream.print();
+    env.execute("Window WordCount");
+  }
 
-        dataStream.print();
-
-        env.execute("Window WordCount");
+  public static class Splitter implements FlatMapFunction<String, Tuple2<String, Integer>> {
+    @Override
+    public void flatMap(String sentence, Collector<Tuple2<String, Integer>> out) throws Exception {
+      System.out.println("sentence: " + sentence);
+      for (String word : sentence.split(" ")) {
+        out.collect(new Tuple2<String, Integer>(word, 1));
+      }
     }
-
-    public static class Splitter implements FlatMapFunction<String, Tuple2<String, Integer>> {
-        @Override
-        public void flatMap(String sentence, Collector<Tuple2<String, Integer>> out) throws Exception {
-            System.out.println("sentence: " + sentence);
-            for (String word: sentence.split(" ")) {
-                out.collect(new Tuple2<String, Integer>(word, 1));
-            }
-        }
-    }
-
+  }
 }

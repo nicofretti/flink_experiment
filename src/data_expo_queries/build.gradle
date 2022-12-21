@@ -54,6 +54,7 @@ dependencies {
     // --------------------------------------------------------------
     implementation "org.apache.flink:flink-streaming-java:${flinkVersion}"
     implementation "org.apache.flink:flink-clients:${flinkVersion}"
+    implementation 'com.google.googlejavaformat:google-java-format:1.15.0'
     // --------------------------------------------------------------
     // Dependencies that should be part of the shadow jar, e.g.
     // connectors. These must be in the flinkShadowJar configuration!
@@ -64,7 +65,9 @@ dependencies {
     runtimeOnly "org.apache.logging.log4j:log4j-core:${log4jVersion}"
     // Add test dependencies here.
     // testCompile "junit:junit:4.12"
-    // flinkShadowJar "org.apache.flink:flink-connector-kafka:${flinkVersion}"
+    flinkShadowJar "org.apache.flink:flink-csv:${flinkVersion}"
+    flinkShadowJar "org.apache.flink:flink-connector-files:${flinkVersion}"
+
 }
 
 // make compileOnly dependencies available for tests:
