@@ -22,8 +22,10 @@ if __name__ == "__main__":
             for i in range(batch_size):
                 rows += f.readline()
             client.send(rows.encode())
+            x = input("Data ready, send? (y/n) ")
             rows = f.readline()
             count_response += 1
-            x = input("Continue? (y/n)")
+
+    x = input("Close connection confirm: ")
     client.close()
     server.close()
