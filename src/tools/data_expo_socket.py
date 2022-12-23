@@ -18,11 +18,11 @@ if __name__ == "__main__":
     with open(os.path.join(current_dir, files[0]), "r") as f:
         header = f.readline()
         rows = f.readline()
-        while rows != "" and max_response > count_response and x!="n":
+        while rows != "" and max_response > count_response and x.strip() != "n":
             for i in range(batch_size):
                 rows += f.readline()
             client.send(rows.encode())
-            x = input("Data ready, send? (y/n) ")
+            # x = input("Data ready, send? (y/n) ")
             rows = f.readline()
             count_response += 1
 

@@ -11,17 +11,15 @@ import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.LocalStreamEnvironment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.DefaultRollingPolicy;
+import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.OnCheckpointRollingPolicy;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.triggers.PurgingTrigger;
 import org.apache.flink.streaming.api.windowing.triggers.Trigger;
 import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
 import org.apache.flink.streaming.api.windowing.windows.Window;
@@ -67,10 +65,10 @@ public class BestDayOfWeek {
             .keyBy(value -> value.f0)
             // Deployment: every 10 seconds there is a calculation
             .window(TumblingEventTimeWindows.of(Time.seconds(4)))
+            // .window(EventTimeSessionWindows.withGap(Time.seconds(10)))
             // Debug window processed instantly
             // .window(EventTimeSessionWindows.withGap(Time.seconds(1)))
-            .trigger(PurgingTrigger.of(TimerTrigger.of(Time.seconds(10))))
-            // .trigger(ProcessingTimeTrigger.create())
+            // .trigger(PurgingTrigger.of(TimerTrigger.of(Time.seconds(100))))
             .reduce(
                 (ReduceFunction<Tuple3<Integer, Integer, Integer>>)
                     (i, j) -> new Tuple3<>(i.f0, i.f1 + j.f1, i.f2 + j.f2));
@@ -84,14 +82,10 @@ public class BestDayOfWeek {
                             (String.format(
                                     "%d,%.2f\n", element.f0, ((double) element.f1 / element.f2))
                                 .getBytes())))
-            .withRollingPolicy(
-                DefaultRollingPolicy.builder()
-                    .withMaxPartSize(MemorySize.ofMebiBytes(1024))
-                    .withInactivityInterval(Duration.ofSeconds(1))
-                    .build())
+            .withRollingPolicy(OnCheckpointRollingPolicy.build())
             .build();
     // Writing the result, the parallelism is 1 to avoid multiple files
-    result.sinkTo(sink).setParallelism(1);
+    Object end = result.sinkTo(sink).setParallelism(1);
     env.execute("BestDayOfWeek");
   }
   // override the ProcessingTimeTrigger behavior
