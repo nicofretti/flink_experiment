@@ -44,6 +44,12 @@ public class BestDayOfWeek {
     } else {
       data_stream = env.socketTextStream("localhost", 8888);
     }
+    // Add the watermarking
+    data_stream =
+        data_stream.assignTimestampsAndWatermarks(
+            WatermarkStrategy.<String>forBoundedOutOfOrderness(Duration.ofSeconds(2))
+                .withTimestampAssigner((event, timestamp) -> Instant.now().toEpochMilli()));
+
     // By default, the events are closed in a window of 2 seconds, but if we want the final result
     // we have to set the window larger as much as the streaming time (in this case 1 hour)
     int process_time = 2; // Seconds of window
@@ -53,9 +59,6 @@ public class BestDayOfWeek {
     // Create the result stream
     SingleOutputStreamOperator<Tuple3<Integer, Integer, Integer>> data_stream_clean =
         data_stream
-            .assignTimestampsAndWatermarks(
-                WatermarkStrategy.<String>forBoundedOutOfOrderness(Duration.ofSeconds(2))
-                    .withTimestampAssigner((event, timestamp) -> Instant.now().toEpochMilli()))
             .flatMap(
                 (FlatMapFunction<String, DataExpoRow>)
                     (value, out) -> {

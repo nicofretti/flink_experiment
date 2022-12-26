@@ -16,6 +16,22 @@ To make the project easier to run, there is a `docker-compose.yml` file that cre
 
 The version of Apache Flink used in this project is [1.16.0](https://nightlies.apache.org/flink/flink-docs-release-1.16/), the latest stable version at the moment of writing this document. The project has been developed in a Linux environment, but it should work in other OS as well.
 
+### Download datasets
+The datasets used in the project are:
+- [Data Expo 2009](https://community.amstat.org/jointscsg-section/dataexpo/dataexpo2009): `2005.csv`, `2006.csv`, `2007.csv` and `plane-data.csv`
+- [QUOTES](https://www.kaggle.com/datasets/coolcoder22/quotes-dataset): `QUOTES.csv` the dataset used in the word count example
+After downloading the datasets and extracting them, we need to move them to the `src/datasets` folder, it should look like this:
+```bash
+├── src
+│   ├── datasets
+│   │   ├── 2005.csv
+│   │   ├── 2006.csv
+│   │   ├── 2007.csv
+│   │   ├── plane-data.csv
+│   │   └── QUOTES.csv
+...
+```
+
 ### Python with Conda
 The Pyflink API support only some version of Python, so getting the right version is important. I have use Conda to create a virtual environment with the right Python version. To create the environment, run the following command:
 ```bash
