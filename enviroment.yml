@@ -1,0 +1,5 @@
+name: flink-experiment
+channels:
+  - conda-forge
+dependencies:
+  - python==3.8

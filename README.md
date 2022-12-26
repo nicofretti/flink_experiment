@@ -1,6 +1,10 @@
 # Flink-experiment
  My first project using Apache Flink, a distributed stream processing framework.
 
+### Java JDK
+- Version: 11
+- Vendor: Azul Zulu Community
+
 ### How to run with Docker
 At first we need to start the Flink cluster, for this we can use the following command:
 ```bash

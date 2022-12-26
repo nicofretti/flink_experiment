@@ -29,14 +29,20 @@ import java.time.Instant;
 
 // Q1: When is the best time of week to fly to minimise delays?
 public class BestDayOfWeek {
+
+  static boolean debug = false;
   public static void main(String[] args) throws Exception {
-    // Debugging:
+    // Set up the environment
     StreamExecutionEnvironment env = LocalStreamEnvironment.createLocalEnvironment();
+    // StreamExecutionEnvironment.getExecutionEnvironment();
     env.getConfig().setAutoWatermarkInterval(1000L);
-    // DataStream<String> data_stream = env.fromCollection(DataExpoDebug.example);
-    // Deployment: for docker replace localhost -> host.docker.internal
-    // StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-    DataStream<String> data_stream = env.socketTextStream("localhost", 8888);
+    // Set up the source
+    DataStream<String> data_stream = env.socketTextStream("localhost", 8888);;
+    // if(debug){
+    //   data_stream = env.fromCollection(DataExpoDebug.example);
+    // }else{
+    //   data_stream = env.socketTextStream("localhost", 8888);
+    // }
     // Create the result stream
     SingleOutputStreamOperator<Tuple3<Integer, Integer, Integer>> data_stream_clean =
         data_stream
