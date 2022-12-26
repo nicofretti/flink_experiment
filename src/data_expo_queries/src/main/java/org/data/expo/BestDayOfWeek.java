@@ -11,7 +11,6 @@ import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
-import org.apache.flink.streaming.api.environment.LocalStreamEnvironment;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.OnCheckpointRollingPolicy;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
@@ -20,35 +19,19 @@ import org.apache.flink.streaming.api.windowing.time.Time;
 import java.time.Duration;
 import java.time.Instant;
 
+import static org.data.expo.DataExpoMethods.get_data_stream;
+import static org.data.expo.DataExpoMethods.get_environment;
+
 // Q1: When is the best day of the week to fly to minimise delays?
 public class BestDayOfWeek {
-
-  static boolean LOCAL_ENV = true;
   static boolean DEBUG = false;
   static boolean SHOW_RESULT = true;
 
   public static void main(String[] args) throws Exception {
     // Init the environment
-    StreamExecutionEnvironment env;
-    if (LOCAL_ENV) {
-      env = LocalStreamEnvironment.createLocalEnvironment();
-    } else {
-      env = StreamExecutionEnvironment.getExecutionEnvironment();
-    }
-    // Set up the watermarking every one second by default
-    env.getConfig().setAutoWatermarkInterval(1000L);
-    // Set up the source
-    DataStream<String> data_stream;
-    if (DEBUG) {
-      data_stream = env.fromCollection(DataExpoDebug.example);
-    } else {
-      data_stream = env.socketTextStream("localhost", 8888);
-    }
+    StreamExecutionEnvironment env = get_environment(DEBUG);
     // Add the watermarking
-    data_stream =
-        data_stream.assignTimestampsAndWatermarks(
-            WatermarkStrategy.<String>forBoundedOutOfOrderness(Duration.ofSeconds(2))
-                .withTimestampAssigner((event, timestamp) -> Instant.now().toEpochMilli()));
+    DataStream<String> data_stream = get_data_stream(env, DEBUG);
 
     // By default, the events are closed in a window of 2 seconds, but if we want the final result
     // we have to set the window larger as much as the streaming time (in this case 1 hour)
@@ -59,6 +42,9 @@ public class BestDayOfWeek {
     // Create the result stream
     SingleOutputStreamOperator<Tuple3<Integer, Integer, Integer>> data_stream_clean =
         data_stream
+            .assignTimestampsAndWatermarks(
+                WatermarkStrategy.<String>forBoundedOutOfOrderness(Duration.ofSeconds(2))
+                    .withTimestampAssigner((event, timestamp) -> Instant.now().toEpochMilli()))
             .flatMap(
                 (FlatMapFunction<String, DataExpoRow>)
                     (value, out) -> {
