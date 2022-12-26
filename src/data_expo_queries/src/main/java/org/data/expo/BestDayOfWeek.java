@@ -1,15 +1,11 @@
 package org.data.expo;
 
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.serialization.Encoder;
-import org.apache.flink.api.common.state.ReducingState;
-import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.core.fs.Path;
@@ -20,34 +16,45 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.OnCheckpointRollingPolicy;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.triggers.Trigger;
-import org.apache.flink.streaming.api.windowing.triggers.TriggerResult;
-import org.apache.flink.streaming.api.windowing.windows.Window;
 
 import java.time.Duration;
 import java.time.Instant;
 
-// Q1: When is the best time of week to fly to minimise delays?
+// Q1: When is the best day of the week to fly to minimise delays?
 public class BestDayOfWeek {
 
-  static boolean debug = false;
+  static boolean LOCAL_ENV = true;
+  static boolean DEBUG = false;
+  static boolean SHOW_RESULT = true;
+
   public static void main(String[] args) throws Exception {
-    // Set up the environment
-    StreamExecutionEnvironment env = LocalStreamEnvironment.createLocalEnvironment();
-    // StreamExecutionEnvironment.getExecutionEnvironment();
+    // Init the environment
+    StreamExecutionEnvironment env;
+    if (LOCAL_ENV) {
+      env = LocalStreamEnvironment.createLocalEnvironment();
+    } else {
+      env = StreamExecutionEnvironment.getExecutionEnvironment();
+    }
+    // Set up the watermarking every one second by default
     env.getConfig().setAutoWatermarkInterval(1000L);
     // Set up the source
-    DataStream<String> data_stream = env.socketTextStream("localhost", 8888);;
-    // if(debug){
-    //   data_stream = env.fromCollection(DataExpoDebug.example);
-    // }else{
-    //   data_stream = env.socketTextStream("localhost", 8888);
-    // }
+    DataStream<String> data_stream;
+    if (DEBUG) {
+      data_stream = env.fromCollection(DataExpoDebug.example);
+    } else {
+      data_stream = env.socketTextStream("localhost", 8888);
+    }
+    // By default, the events are closed in a window of 2 seconds, but if we want the final result
+    // we have to set the window larger as much as the streaming time (in this case 1 hour)
+    int process_time = 2; // Seconds of window
+    if (SHOW_RESULT) {
+      process_time = 3600;
+    }
     // Create the result stream
     SingleOutputStreamOperator<Tuple3<Integer, Integer, Integer>> data_stream_clean =
         data_stream
             .assignTimestampsAndWatermarks(
-                WatermarkStrategy.<String>forBoundedOutOfOrderness(Duration.ofSeconds(1))
+                WatermarkStrategy.<String>forBoundedOutOfOrderness(Duration.ofSeconds(2))
                     .withTimestampAssigner((event, timestamp) -> Instant.now().toEpochMilli()))
             .flatMap(
                 (FlatMapFunction<String, DataExpoRow>)
@@ -69,12 +76,7 @@ public class BestDayOfWeek {
     DataStream<Tuple3<Integer, Integer, Integer>> result =
         data_stream_clean
             .keyBy(value -> value.f0)
-            // Deployment: every 10 seconds there is a calculation
-            .window(TumblingEventTimeWindows.of(Time.seconds(4)))
-            // .window(EventTimeSessionWindows.withGap(Time.seconds(10)))
-            // Debug window processed instantly
-            // .window(EventTimeSessionWindows.withGap(Time.seconds(1)))
-            // .trigger(PurgingTrigger.of(TimerTrigger.of(Time.seconds(100))))
+            .window(TumblingEventTimeWindows.of(Time.seconds(process_time)))
             .reduce(
                 (ReduceFunction<Tuple3<Integer, Integer, Integer>>)
                     (i, j) -> new Tuple3<>(i.f0, i.f1 + j.f1, i.f2 + j.f2));
@@ -91,102 +93,7 @@ public class BestDayOfWeek {
             .withRollingPolicy(OnCheckpointRollingPolicy.build())
             .build();
     // Writing the result, the parallelism is 1 to avoid multiple files
-    Object end = result.sinkTo(sink).setParallelism(1);
+    result.sinkTo(sink).setParallelism(1);
     env.execute("BestDayOfWeek");
-  }
-  // override the ProcessingTimeTrigger behavior
-  public static class TimerTrigger<W extends Window> extends Trigger<Object, W> {
-    private static final long serialVersionUID = 1L;
-    private final long interval;
-    private final ReducingStateDescriptor<Long> stateDesc;
-
-    private TimerTrigger(long winInterValMills) { // window
-      this.stateDesc =
-          new ReducingStateDescriptor("fire-time", new TimerTrigger.Min(), LongSerializer.INSTANCE);
-      this.interval = winInterValMills;
-    }
-
-    public static <W extends Window> TimerTrigger<W> of(Time interval) {
-      return new TimerTrigger(interval.toMilliseconds());
-    }
-
-    public TriggerResult onElement(Object element, long timestamp, W window, TriggerContext ctx)
-        throws Exception {
-      if (window.maxTimestamp() <= ctx.getCurrentWatermark()) {
-        // if the watermark is already past the window fire immediately
-        return TriggerResult.FIRE;
-      }
-      long now = System.currentTimeMillis();
-      ReducingState<Long> fireTimestamp = (ReducingState) ctx.getPartitionedState(this.stateDesc);
-      if (fireTimestamp.get() == null) {
-        long time = Math.max(timestamp, window.maxTimestamp()) + interval;
-        if (now - window.maxTimestamp() > interval) { // fire late
-          time = (now - now % 1000) + interval - 1;
-        }
-        ctx.registerProcessingTimeTimer(time);
-        fireTimestamp.add(time);
-        return TriggerResult.CONTINUE;
-      } else {
-        return TriggerResult.CONTINUE;
-      }
-    }
-
-    public TriggerResult onEventTime(long time, W window, TriggerContext ctx) throws Exception {
-      if (time == window.maxTimestamp()) {
-        return TriggerResult.FIRE;
-      }
-      return TriggerResult.CONTINUE;
-    }
-
-    public TriggerResult onProcessingTime(long time, W window, TriggerContext ctx)
-        throws Exception {
-      ReducingState<Long> fireTimestamp = (ReducingState) ctx.getPartitionedState(this.stateDesc);
-      if (((Long) fireTimestamp.get()).equals(time)) {
-        fireTimestamp.clear();
-        long maxTimestamp = Math.max(window.maxTimestamp(), time); // maybe useless
-        if (maxTimestamp == time) {
-          maxTimestamp = time + this.interval;
-        }
-        fireTimestamp.add(maxTimestamp);
-        ctx.registerProcessingTimeTimer(maxTimestamp);
-        return TriggerResult.FIRE;
-      } else {
-        return TriggerResult.CONTINUE;
-      }
-    }
-
-    public void clear(W window, TriggerContext ctx) throws Exception {
-      ReducingState<Long> fireTimestamp = (ReducingState) ctx.getPartitionedState(this.stateDesc);
-      long timestamp = (Long) fireTimestamp.get();
-      ctx.deleteProcessingTimeTimer(timestamp);
-      fireTimestamp.clear();
-    }
-
-    public boolean canMerge() {
-      return true;
-    }
-
-    public void onMerge(W window, OnMergeContext ctx) {
-      ctx.mergePartitionedState(this.stateDesc);
-    }
-
-    @VisibleForTesting
-    public long getInterval() {
-      return this.interval;
-    }
-
-    public String toString() {
-      return "TimerTrigger(" + this.interval + ")";
-    }
-
-    private static class Min implements ReduceFunction<Long> {
-      private static final long serialVersionUID = 1L;
-
-      private Min() {}
-
-      public Long reduce(Long value1, Long value2) throws Exception {
-        return Math.min(value1, value2);
-      }
-    }
   }
 }
