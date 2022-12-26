@@ -56,3 +56,6 @@ It's time to run the first job. The docker infrastructure is created to add a vo
 - [Apache Flink](https://nightlies.apache.org/flink/flink-docs-master/) framework documentation
 - [QUOTES.csv](https://www.kaggle.com/datasets/coolcoder22/quotes-dataset) the dataset used in the word count example
 - [Data Expo 2009](https://community.amstat.org/jointscsg-section/dataexpo/dataexpo2009) the dataset used in the queries
+
+TODO:
+- [] Filter socket with only the data we need

@@ -1,9 +1,29 @@
 import os
 import time
-
 import pwn
+import pandas as pd
+
+
+def read_planes(path):
+    """
+    :param path: path to the file where read the planes
+    :return: a dictionary with key the `tailnum` and value the `year` of the plane
+    """
+    planes_data = {}
+    with open(path, 'r') as f:
+        f.readline()  # skip header
+        line = f.readline()
+        while line != "":
+            line = line.strip().split(',')
+            if len(line) > 8:
+                # 0-
+                planes_data[line[0]] = line[8]
+            line = f.readline()
+    return planes_data
+
 
 if __name__ == "__main__":
+    planes = read_planes("../datasets/planes.csv")
     files = ["../datasets/2005.csv", "../datasets/2006.csv", "../datasets/2007.csv"]
     # Parameters
     batch_size = 2000000
