@@ -15,12 +15,13 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.OnCheckpointRollingPolicy;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
+import org.data.expo.utils.DataExpoRow;
 
 import java.time.Duration;
 import java.time.Instant;
 
-import static org.data.expo.DataExpoMethods.get_data_stream;
-import static org.data.expo.DataExpoMethods.get_environment;
+import static org.data.expo.utils.DataExpoMethods.get_data_stream;
+import static org.data.expo.utils.DataExpoMethods.get_environment;
 
 // Q1: When is the best day of the week to fly to minimise delays?
 public class BestDayOfWeek {

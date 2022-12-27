@@ -1,5 +1,6 @@
-package org.data.expo;
+package org.data.expo.utils;
 
+// Class that identifies a row of the data set
 public class DataExpoRow {
   // Year,Month,DayofMonth,DayOfWeek,DepTime,CRSDepTime,ArrTime,CRSArrTime,UniqueCarrier,FlightNum,
   // TailNum,ActualElapsedTime,CRSElapsedTime,AirTime,ArrDelay,DepDelay,Origin,Dest,Distance,TaxiIn,
@@ -35,6 +36,8 @@ public class DataExpoRow {
   public int late_aircraft_delay;
   // Added column
   public int year_of_plane;
+  public String country_dest_airport;
+  public String country_origin_airport;
 
   @SuppressWarnings("unused")
   public DataExpoRow() {}
@@ -77,11 +80,10 @@ public class DataExpoRow {
     this.security_delay = (int) Double.parseDouble(row_split[27]);
     this.late_aircraft_delay = (int) Double.parseDouble(row_split[28]);
     // Added column
-    if (!row_split[29].equals("None")) {
-      this.year_of_plane = (int) Double.parseDouble(row_split[29]);
-    } else {
-      this.year_of_plane = 0;
-    }
+    this.year_of_plane =
+        !row_split[29].equals("None") ? (int) Double.parseDouble(row_split[29]) : 0;
+    this.country_origin_airport = !row_split[30].equals("None") ? row_split[30] : "";
+    this.country_dest_airport = !row_split[31].equals("None") ? row_split[31] : "";
   }
 
   @Override
