@@ -60,7 +60,7 @@ public class PlansSufferDelay {
     DataStream<Tuple3<String, Integer, Integer>> result =
         data_stream_clean
             .keyBy(value -> value.f0)
-            .window(TumblingEventTimeWindows.of(Time.seconds(1)))
+            .window(TumblingEventTimeWindows.of(Time.seconds(2)))
             .reduce((i, j) -> new Tuple3<>(i.f0, i.f1 + j.f1, i.f2 + j.f2));
 
     final FileSink<Tuple3<String, Integer, Integer>> sink =
@@ -75,7 +75,7 @@ public class PlansSufferDelay {
             .withRollingPolicy(OnCheckpointRollingPolicy.build())
             .build();
     // Writing the result, the parallelism is 1 to avoid multiple files
-    result.sinkTo(sink).setParallelism(1);
+    result.rebalance().sinkTo(sink).setParallelism(1);
     env.execute("Q2: Do older planes suffer more delays?");
   }
 }

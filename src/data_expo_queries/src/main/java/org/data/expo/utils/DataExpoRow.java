@@ -36,8 +36,8 @@ public class DataExpoRow {
   public int late_aircraft_delay;
   // Added column
   public int year_of_plane;
-  public String country_dest_airport;
-  public String country_origin_airport;
+  public String dest_state_airport;
+  public String origin_state_airport;
 
   @SuppressWarnings("unused")
   public DataExpoRow() {}
@@ -82,8 +82,8 @@ public class DataExpoRow {
     // Added column
     this.year_of_plane =
         !row_split[29].equals("None") ? (int) Double.parseDouble(row_split[29]) : 0;
-    this.country_origin_airport = !row_split[30].equals("None") ? row_split[30] : "";
-    this.country_dest_airport = !row_split[31].equals("None") ? row_split[31] : "";
+    this.origin_state_airport = !row_split[30].equals("None") ? row_split[30] : "";
+    this.dest_state_airport = !row_split[31].equals("None") ? row_split[31] : "";
   }
 
   @Override

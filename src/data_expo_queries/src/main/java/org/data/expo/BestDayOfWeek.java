@@ -83,7 +83,7 @@ public class BestDayOfWeek {
             .withRollingPolicy(OnCheckpointRollingPolicy.build())
             .build();
     // Writing the result, the parallelism is 1 to avoid multiple files
-    result.sinkTo(sink).setParallelism(1);
+    result.rebalance().sinkTo(sink).setParallelism(1);
     env.execute("Q1: When is the best day of the week to fly to minimise delays?");
   }
 }
