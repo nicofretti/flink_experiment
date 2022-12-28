@@ -5,7 +5,7 @@ import pwn
 
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    files = ["../datasets/2005.csv", "../datasets/2006.csv", "../datasets/2007.csv"]
+    files = ["../datasets/2005.csv"]
     chunk_size = 2000000
     df_airplanes = pd.read_csv("../datasets/plane-data.csv")
     df_airports = pd.read_csv("../datasets/airports.csv")
