@@ -17,6 +17,7 @@ import org.data.expo.utils.DataExpoRow;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 
 import static org.data.expo.utils.DataExpoMethods.get_data_stream;
 import static org.data.expo.utils.DataExpoMethods.get_environment;
@@ -24,7 +25,6 @@ import static org.data.expo.utils.DataExpoMethods.get_environment;
 // Q3: How does the number of people flying between different locations change over time?
 public class PeopleFlyingBetweenLocations {
   static boolean DEBUG = false;
-  static boolean SHOW_RESULT = true;
 
   public static void main(String[] args) throws Exception {
     // Init the environment
@@ -39,6 +39,10 @@ public class PeopleFlyingBetweenLocations {
                     .withTimestampAssigner((event, timestamp) -> Instant.now().toEpochMilli()))
             .flatMap(
                 (value, out) -> out.collect(new DataExpoRow(value)), Types.POJO(DataExpoRow.class))
+            .filter(
+                v ->
+                    !Objects.equals(v.origin_state_airport, "0")
+                        && !Objects.equals(v.dest_state_airport, "0"))
             .map(
                 (v) ->
                     new Tuple3<>(
