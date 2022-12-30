@@ -2,8 +2,9 @@ package org.data.expo;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStream;
-import org.apache.flink.streaming.api.datastream.KeyedStream;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
@@ -19,7 +20,7 @@ import static org.data.expo.utils.DataExpoMethods.get_environment;
 // Q4: Can you detect cascading failures as delays in one airport create delays in others?
 public class CascadingDelays {
 
-  static boolean DEBUG = false;
+  static boolean DEBUG = true;
 
   public static void main(String[] args) throws Exception {
     // Init the environment
@@ -28,7 +29,7 @@ public class CascadingDelays {
     DataStream<String> data_stream = get_data_stream(env, DEBUG);
 
     // Create the result stream
-    KeyedStream<FlightWithDelay, String> data_stream_clean =
+    SingleOutputStreamOperator<FlightWithDelay> data_stream_clean =
         data_stream
             .assignTimestampsAndWatermarks(
                 WatermarkStrategy.<String>forBoundedOutOfOrderness(Duration.ofSeconds(2))
@@ -50,33 +51,28 @@ public class CascadingDelays {
                         String.format("%s-%s-%s", value.year, value.month, value.day_of_month),
                         value.origin,
                         value.dest,
-                        value.actual_elapsed_time - value.crs_elapsed_time))
-            .keyBy(value -> value.plane + value.datetime);
+                        value.actual_elapsed_time - value.crs_elapsed_time));
     // Union of the stream to merge the cascading delays
-    DataStream<FlightWithDelay> two_stream_merged =
+    DataStream<Tuple2<String, String>> t1 =
         data_stream_clean
-            .join(data_stream_clean)
-            .where(value -> value.plane + value.datetime + value.destination)
-            .equalTo(value -> value.plane + value.datetime + value.origin)
-            .window(TumblingEventTimeWindows.of(Time.seconds(2)))
-            .apply(
-                (first, second) -> {
-                  first.add_cascading_delay(second.destination, second.delay);
-                  return first;
-                });
-    two_stream_merged.print();
-    // Create the sink
-    // final FileSink<FlightWithDelay> sink =
-    //     FileSink.forRowFormat(
-    //             new Path("output"),
-    //             (Encoder<FlightWithDelay>)
-    //                 (element, stream) -> {
-    //                   stream.write(element.to_csv().getBytes());
-    //                 })
-    //         .withRollingPolicy(OnCheckpointRollingPolicy.build())
-    //         .build();
-    // // Sink the result
-    // two_stream_merged.sinkTo(sink).setParallelism(1);
+            .rebalance()
+            .map(
+                value -> new Tuple2<>(value.get_id_for_destination(), value.get_origin_and_dest()),
+                Types.TUPLE(Types.STRING, Types.STRING));
+    DataStream<Tuple2<String, String>> t2 =
+        data_stream_clean
+            .rebalance()
+            .map(
+                value -> new Tuple2<>(value.get_id_for_origin(), value.get_origin_and_dest()),
+                Types.TUPLE(Types.STRING, Types.STRING));
+    t1.join(t2)
+        .where(value -> value.f0)
+        .equalTo(value -> value.f0)
+        .window(TumblingEventTimeWindows.of(Time.seconds(2)))
+        .apply(
+            (first, second) -> new Tuple2<>(first.f0, first.f1 + " -> " + second.f1),
+            Types.TUPLE(Types.STRING, Types.STRING))
+        .print();
     env.execute("Q4");
   }
 }

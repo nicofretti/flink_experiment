@@ -22,24 +22,23 @@ public class FlightWithDelay {
     this.origin = origin;
     this.destination = destination;
     this.delay = delay;
-    this.cascading_delays = new ArrayList<>();
   }
 
-  public void add_cascading_delay(String destination, int delay) {
-    this.cascading_delays.add(new Tuple2<>(this.destination, this.delay));
-    this.destination = destination;
-    this.delay += delay;
+  public String get_id_for_origin() {
+    return String.format("%s-%s-%s", this.plane, this.datetime, this.origin);
+  }
+
+  public String get_id_for_destination() {
+    return String.format("%s-%s-%s", this.plane, this.datetime, this.destination);
+  }
+
+  public String get_origin_and_dest() {
+    return String.format("[%s -> %s (%d)]", this.origin, this.destination, this.delay);
   }
 
   @Override
   public String toString() {
-    StringBuilder scaling = new StringBuilder(this.origin);
-    // Concat previous scaling
-    for (Tuple2<String, Integer> i : cascading_delays) {
-      scaling.append(String.format(" -> %s", i.f0));
-    }
-    scaling.append(String.format(" -> %s", this.destination));
-    return String.format("%s %s (%s): %d", datetime, plane, scaling, delay);
+    return String.format("%s %s %s", datetime, plane, get_origin_and_dest());
   }
 
   public String to_csv() {
