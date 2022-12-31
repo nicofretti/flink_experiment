@@ -4,8 +4,6 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple4;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 public class FlightWithDelay {
   public String plane;
@@ -55,34 +53,10 @@ public class FlightWithDelay {
 
   @Override
   public String toString() {
-    String cascading_delays_str = "";
-    for (Tuple2<String, Integer> cascading_delay : this.cascading_delays) {
-      cascading_delays_str += String.format("%s (%d), ", cascading_delay.f0, cascading_delay.f1);
-    }
-    return String.format("%s %s %s", datetime, plane, cascading_delays_str);
+    return String.format("%s -> %s (%d)", this.origin, this.destination, this.delay);
   }
 
   public String to_csv() {
     return "";
-  }
-}
-
-class FlightDelayAccumulator {
-  public String plane;
-  public Map<Tuple4<Integer, Integer, Integer, Integer>, ArrayList<FlightWithDelay>> delays;
-
-  FlightDelayAccumulator(String plane) {
-    this.plane = plane;
-    this.delays = new HashMap<>();
-  }
-
-  void add_flight(FlightWithDelay f) {
-    if (!this.delays.containsKey(f.datetime)) {
-      ArrayList<FlightWithDelay> list = new ArrayList<>();
-      list.add(f);
-      this.delays.put(f.datetime, list);
-      return;
-    }
-    this.delays.get(f.datetime).add(f);
   }
 }

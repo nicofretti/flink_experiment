@@ -10,14 +10,11 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.data.expo.utils.DataExpoRow;
+import org.data.expo.utils.FlightDelayAccumulator;
 import org.data.expo.utils.FlightWithDelay;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.data.expo.utils.DataExpoMethods.get_data_stream;
 import static org.data.expo.utils.DataExpoMethods.get_environment;
@@ -25,7 +22,7 @@ import static org.data.expo.utils.DataExpoMethods.get_environment;
 // Q4: Can you detect cascading failures as delays in one airport create delays in others?
 public class CascadingDelays {
 
-  static boolean DEBUG = true;
+  static boolean DEBUG = false;
 
   public static void main(String[] args) throws Exception {
     // Init the environment
@@ -64,57 +61,29 @@ public class CascadingDelays {
         .window(TumblingEventTimeWindows.of(Time.seconds(2)))
         .aggregate(
             new AggregateFunction<
-                FlightWithDelay, Map<String, ArrayList<FlightWithDelay>>, FlightWithDelay>() {
+                FlightWithDelay, FlightDelayAccumulator, FlightDelayAccumulator>() {
               @Override
-              public Map<String, ArrayList<FlightWithDelay>> createAccumulator() {
-                return new HashMap<>();
+              public FlightDelayAccumulator createAccumulator() {
+                return new FlightDelayAccumulator();
               }
 
               @Override
-              public Map<String, ArrayList<FlightWithDelay>> add(
-                  FlightWithDelay value, Map<String, ArrayList<FlightWithDelay>> accumulator) {
-                if (accumulator.containsKey(value.origin)) {
-                  // accumulator.get(value.origin).add(value);
-                  // Remove the previous value and add the new one
-                  ArrayList<FlightWithDelay> list = accumulator.get(value.origin);
-                  list.add(value);
-                  accumulator.put(value.destination, list);
-                  accumulator.remove(value.origin);
-                } else if (!accumulator.containsKey(value.destination)) {
-                  ArrayList<FlightWithDelay> list = new ArrayList<>();
-                  list.add(value);
-                  accumulator.put(value.destination, list);
-                }
+              public FlightDelayAccumulator add(
+                  FlightWithDelay value, FlightDelayAccumulator accumulator) {
+                accumulator.add_flight(value);
                 return accumulator;
               }
 
               @Override
-              public FlightWithDelay getResult(
-                  Map<String, ArrayList<FlightWithDelay>> accumulator) {
-                ArrayList<FlightWithDelay> total = new ArrayList<>();
-                for (String key : accumulator.keySet()) {
-                  total.addAll(accumulator.get(key));
-                }
-                // Order the total by the field time_departure
-                total.sort(Comparator.comparingInt(o -> o.datetime.f3));
-                // Compute the final resul
-                FlightWithDelay result = total.get(0);
-                for (int i = 1; i < total.size(); i++) {
-                  result.add_cascading_delay(total.get(i));
-                }
-                return result;
+              public FlightDelayAccumulator getResult(FlightDelayAccumulator accumulator) {
+                return accumulator;
               }
 
               @Override
-              public Map<String, ArrayList<FlightWithDelay>> merge(
-                  Map<String, ArrayList<FlightWithDelay>> a,
-                  Map<String, ArrayList<FlightWithDelay>> b) {
-                for (Map.Entry<String, ArrayList<FlightWithDelay>> entry : b.entrySet()) {
-                  if (!a.containsKey(entry.getKey())) {
-                    a.put(entry.getKey(), entry.getValue());
-                  } else {
-                    a.get(entry.getKey()).addAll(entry.getValue());
-                  }
+              public FlightDelayAccumulator merge(
+                  FlightDelayAccumulator a, FlightDelayAccumulator b) {
+                for (FlightWithDelay f : b.get_all_flights()) {
+                  a.add_flight(f);
                 }
                 return a;
               }
