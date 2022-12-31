@@ -9,7 +9,7 @@ public class DataExpoRow {
   public int month;
   public int day_of_month;
   public int day_of_week;
-  public double dep_time;
+  public int dep_time;
   public int crs_dep_time;
   public double arr_time;
   public int crs_arr_time;
@@ -54,7 +54,7 @@ public class DataExpoRow {
     this.month = (int) Double.parseDouble(row_split[1]);
     this.day_of_month = (int) Double.parseDouble(row_split[2]);
     this.day_of_week = (int) Double.parseDouble(row_split[3]);
-    this.dep_time = Double.parseDouble(row_split[4]);
+    this.dep_time = (int) Double.parseDouble(row_split[4]);
     this.crs_dep_time = (int) Double.parseDouble(row_split[5]);
     this.arr_time = Double.parseDouble(row_split[6]);
     this.crs_arr_time = (int) Double.parseDouble(row_split[7]);

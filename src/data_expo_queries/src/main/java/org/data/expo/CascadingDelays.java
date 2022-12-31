@@ -1,8 +1,9 @@
 package org.data.expo;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.common.typeinfo.Types;
-import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -13,6 +14,10 @@ import org.data.expo.utils.FlightWithDelay;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.data.expo.utils.DataExpoMethods.get_data_stream;
 import static org.data.expo.utils.DataExpoMethods.get_environment;
@@ -48,30 +53,72 @@ public class CascadingDelays {
                 value ->
                     new FlightWithDelay(
                         value.tail_num,
-                        String.format("%s-%s-%s", value.year, value.month, value.day_of_month),
+                        new Tuple4<Integer, Integer, Integer, Integer>(
+                            value.year, value.month, value.day_of_month, value.dep_time),
                         value.origin,
                         value.dest,
                         value.actual_elapsed_time - value.crs_elapsed_time));
     // Union of the stream to merge the cascading delays
-    DataStream<Tuple2<String, String>> t1 =
-        data_stream_clean
-            .rebalance()
-            .map(
-                value -> new Tuple2<>(value.get_id_for_destination(), value.get_origin_and_dest()),
-                Types.TUPLE(Types.STRING, Types.STRING));
-    DataStream<Tuple2<String, String>> t2 =
-        data_stream_clean
-            .rebalance()
-            .map(
-                value -> new Tuple2<>(value.get_id_for_origin(), value.get_origin_and_dest()),
-                Types.TUPLE(Types.STRING, Types.STRING));
-    t1.join(t2)
-        .where(value -> value.f0)
-        .equalTo(value -> value.f0)
+    data_stream_clean
+        .keyBy(value -> value.plane)
         .window(TumblingEventTimeWindows.of(Time.seconds(2)))
-        .apply(
-            (first, second) -> new Tuple2<>(first.f0, first.f1 + " -> " + second.f1),
-            Types.TUPLE(Types.STRING, Types.STRING))
+        .aggregate(
+            new AggregateFunction<
+                FlightWithDelay, Map<String, ArrayList<FlightWithDelay>>, FlightWithDelay>() {
+              @Override
+              public Map<String, ArrayList<FlightWithDelay>> createAccumulator() {
+                return new HashMap<>();
+              }
+
+              @Override
+              public Map<String, ArrayList<FlightWithDelay>> add(
+                  FlightWithDelay value, Map<String, ArrayList<FlightWithDelay>> accumulator) {
+                if (accumulator.containsKey(value.origin)) {
+                  // accumulator.get(value.origin).add(value);
+                  // Remove the previous value and add the new one
+                  ArrayList<FlightWithDelay> list = accumulator.get(value.origin);
+                  list.add(value);
+                  accumulator.put(value.destination, list);
+                  accumulator.remove(value.origin);
+                } else if (!accumulator.containsKey(value.destination)) {
+                  ArrayList<FlightWithDelay> list = new ArrayList<>();
+                  list.add(value);
+                  accumulator.put(value.destination, list);
+                }
+                return accumulator;
+              }
+
+              @Override
+              public FlightWithDelay getResult(
+                  Map<String, ArrayList<FlightWithDelay>> accumulator) {
+                ArrayList<FlightWithDelay> total = new ArrayList<>();
+                for (String key : accumulator.keySet()) {
+                  total.addAll(accumulator.get(key));
+                }
+                // Order the total by the field time_departure
+                total.sort(Comparator.comparingInt(o -> o.datetime.f3));
+                // Compute the final resul
+                FlightWithDelay result = total.get(0);
+                for (int i = 1; i < total.size(); i++) {
+                  result.add_cascading_delay(total.get(i));
+                }
+                return result;
+              }
+
+              @Override
+              public Map<String, ArrayList<FlightWithDelay>> merge(
+                  Map<String, ArrayList<FlightWithDelay>> a,
+                  Map<String, ArrayList<FlightWithDelay>> b) {
+                for (Map.Entry<String, ArrayList<FlightWithDelay>> entry : b.entrySet()) {
+                  if (!a.containsKey(entry.getKey())) {
+                    a.put(entry.getKey(), entry.getValue());
+                  } else {
+                    a.get(entry.getKey()).addAll(entry.getValue());
+                  }
+                }
+                return a;
+              }
+            })
         .print();
     env.execute("Q4");
   }
