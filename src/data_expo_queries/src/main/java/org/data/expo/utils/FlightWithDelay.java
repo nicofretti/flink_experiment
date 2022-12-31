@@ -83,8 +83,4 @@ public class FlightWithDelay implements Comparable<FlightWithDelay> {
     // By hour
     return this.datetime.f3 - f.datetime.f3;
   }
-
-  public String to_csv() {
-    return "";
-  }
 }

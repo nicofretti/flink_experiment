@@ -5,10 +5,14 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import java.util.*;
 
 public class FlightDelayAccumulator {
+
+  public String plane;
   public Map<Tuple3<Integer, Integer, Integer>, SortedSet<FlightWithDelay>> delays;
 
-  public FlightDelayAccumulator() {
+  public FlightDelayAccumulator(FlightWithDelay f) {
     this.delays = new HashMap<>();
+    this.plane = f.plane;
+    this.add_flight(f);
   }
 
   public void add_flight(FlightWithDelay f) {
@@ -41,6 +45,18 @@ public class FlightDelayAccumulator {
       }
     }
     str.append("] ");
+    return str.toString();
+  }
+
+  public String to_csv() {
+    StringBuilder str = new StringBuilder();
+    for (Tuple3<Integer, Integer, Integer> key : this.delays.keySet()) {
+      str.append(String.format("%s,%d,%d,%d,", this.plane, key.f0, key.f1, key.f2));
+      for (FlightWithDelay f : this.delays.get(key)) {
+        str.append(String.format("%s %s %d ", f.origin, f.destination, f.delay));
+      }
+      str.append("\n");
+    }
     return str.toString();
   }
 }
