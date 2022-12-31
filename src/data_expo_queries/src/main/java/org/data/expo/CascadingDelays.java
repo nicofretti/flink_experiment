@@ -50,45 +50,45 @@ public class CascadingDelays {
                 value ->
                     new FlightWithDelay(
                         value.tail_num,
-                        new Tuple4<Integer, Integer, Integer, Integer>(
-                            value.year, value.month, value.day_of_month, value.dep_time),
+                        new Tuple4<>(value.year, value.month, value.day_of_month, value.dep_time),
                         value.origin,
                         value.dest,
                         value.actual_elapsed_time - value.crs_elapsed_time));
     // Union of the stream to merge the cascading delays
-    data_stream_clean
-        .keyBy(value -> value.plane)
-        .window(TumblingEventTimeWindows.of(Time.seconds(2)))
-        .aggregate(
-            new AggregateFunction<
-                FlightWithDelay, FlightDelayAccumulator, FlightDelayAccumulator>() {
-              @Override
-              public FlightDelayAccumulator createAccumulator() {
-                return new FlightDelayAccumulator();
-              }
+    DataStream<FlightDelayAccumulator> window =
+        data_stream_clean
+            .keyBy(value -> value.plane)
+            .window(TumblingEventTimeWindows.of(Time.seconds(2)))
+            .aggregate(
+                new AggregateFunction<
+                    FlightWithDelay, FlightDelayAccumulator, FlightDelayAccumulator>() {
+                  @Override
+                  public FlightDelayAccumulator createAccumulator() {
+                    return new FlightDelayAccumulator();
+                  }
 
-              @Override
-              public FlightDelayAccumulator add(
-                  FlightWithDelay value, FlightDelayAccumulator accumulator) {
-                accumulator.add_flight(value);
-                return accumulator;
-              }
+                  @Override
+                  public FlightDelayAccumulator add(
+                      FlightWithDelay value, FlightDelayAccumulator accumulator) {
+                    accumulator.add_flight(value);
+                    return accumulator;
+                  }
 
-              @Override
-              public FlightDelayAccumulator getResult(FlightDelayAccumulator accumulator) {
-                return accumulator;
-              }
+                  @Override
+                  public FlightDelayAccumulator getResult(FlightDelayAccumulator accumulator) {
+                    return accumulator;
+                  }
 
-              @Override
-              public FlightDelayAccumulator merge(
-                  FlightDelayAccumulator a, FlightDelayAccumulator b) {
-                for (FlightWithDelay f : b.get_all_flights()) {
-                  a.add_flight(f);
-                }
-                return a;
-              }
-            })
-        .print();
+                  @Override
+                  public FlightDelayAccumulator merge(
+                      FlightDelayAccumulator a, FlightDelayAccumulator b) {
+                    for (FlightWithDelay f : b.get_all_flights()) {
+                      a.add_flight(f);
+                    }
+                    return a;
+                  }
+                });
+    window.print();
     env.execute("Q4");
   }
 }
