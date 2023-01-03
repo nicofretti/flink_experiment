@@ -37,19 +37,27 @@ def split(line: Row):
 if __name__ == "__main__":
     # Define files path from the current directory
     file_input = "../datasets/QUOTE.csv"
-    file_output = "output/result.csv"
+    file_output = "output/word_count_out.csv"
+    print(os.path)
+    # Make dir output if it does not exist
+    if not os.path.exists("output"):
+        os.mkdir("output")
+    # If output file exists, delete it
+    if not os.path.exists(file_output):
+        # Create file output
+        open(file_output, 'w').close()
     # Get the current directory
     current_dir = os.path.dirname(os.path.realpath(__file__))
     # Set up the input and output path
     file_path = os.path.join(current_dir, file_input)
     # Set up the environment
     t_env = TableEnvironment.create(EnvironmentSettings.in_batch_mode())
-    t_env.get_config().set("parallelism.default", "1")
     # Create source table
     source_table = create_source_table(t_env, 'source', file_path)
     # Executing the word count
     source_table.flat_map(split).alias('word') \
         .group_by(col('word')) \
         .select(col('word'), lit(1).count.alias('count')) \
-        .order_by(col('count').desc) \
-        .to_pandas().to_csv(os.path.join(current_dir, file_output), index=False, header=False)
+        .to_pandas().to_csv(os.path.join(current_dir, file_output), index=False, header=False, )
+        #.order_by(col('count').desc) \
+
