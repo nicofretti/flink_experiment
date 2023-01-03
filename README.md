@@ -3,13 +3,13 @@ This project is an experiment with Apache Flink, a framework for distributed str
 - `src/word_count`: a word count example using PyFlink
 - `src/data_expo_queries`: list of four queries taken from the Data Expo 2009 dataset, using Apache Flink with Java
 
-Those two parts have been separated in two different folders after some difficulties with PyFlink. Apache Flink offers a lot of APIs for Python but there are still some limitations/bugs that make difficult to develop a project with it. So the queries of Data Expo 2009 dataset have been developed with Java, the most stable and supported API.
+Those two parts have been separated in two different folders after some difficulties with PyFlink. Apache Flink offers a lot of APIs for Python but there are still some limitations that make difficult to develop a project with it. So the queries of Data Expo 2009 dataset have been developed with Java, the most stable and supported API.
 
 ## Apache Flink
 Apache Flink is an open-source stream processing framework that can be used for processing unbounded and bounded data streams. It is a distributed system that can run on a cluster of machines, and it provides efficient, scalable, and fault-tolerant stream and batch data processing. Flink is written in Java and Scala, and it has a rich set of APIs for creating streaming data pipelines.
 
 ### Stream Processing
-In Flink applications are composed streaming dataflows that can be transformed using operators like `map`, `reduce`, `keyBy` etc. The dataflows form a directed acyclic graph (DAG) that start with one o more source and end with one or more sinks. The dataflows can be executed on a local machine or on a cluster of machines, and can be executed in a streaming or batch fashion.
+In Flink applications are composed of streaming dataflows that can be transformed using operators like `map`, `reduce`, `keyBy` etc. The dataflows form a directed acyclic graph (DAG) that start with one o more source and end with one or more sinks. The dataflows can be executed on a local machine or on a cluster of machines, and can be executed in a streaming or batch fashion.
 <p align="center">
     <img src="img/parallel_dataflow.svg">
 </p>
@@ -18,17 +18,6 @@ As you can see in the example we can spot two type of operators:
 - `one-to-one` operators, like `map` and `filter`, that transform one input element into one output element preserving partitioning and ordering.
 - `redistributing` operators, like `keyBy` or `rebalance`, that transform one input element into zero, one or more output elements
 
-### Windowing
-Flink has also the concept of windows, which allow you to process data over a fixed period of time, or you can define some custom function (like events count). There are four type of built-in windows:
-- `Tumbling Window`: these windows are fixed-size, non-overlapping windows that are created based on a fixed time interval or number of events. For example, a tumbling window of 5 seconds the current window will be evaluated every 5 seconds and will contain the last 5 seconds of data.
-- `Sliding Window`: simular to the tumbling window but these windows are also allowed to overlap. You can specify the size of the window and the interval at which the windows slide. 
-- `Session Window`: these windows group data into sessions based on the time that has passed since the last event. You can specify a maximum gap between events, and any events that fall within that gap will be placed in the same session.
-- `Global Window`: a window that contains all the events in the stream.
-
-<p align="center">
-    <img src="img/windowing.svg">
-</p>
-
 ### Datastream API and Table API
 In Flink there are two main programming interface for working with streams of data: `DataStream API` and `Table API`.
 
@@ -36,9 +25,8 @@ In Flink there are two main programming interface for working with streams of da
     <img width=400 src="img/levels_of_abstraction.svg">
 </p>
 
+The DataStream API is core API for working with streams of data. It allows to process streams in real-time and perform transformations using operators like `map`, `filter`, `join`, `aggregate` etc.
 
-
-The DataStream API is low-level API for working with streams of data (that are potentially infinite and arrive over time). It allows to process streams in real-time and perform transformations using operators like `map`, `filter`, `join`, `aggregate` etc.
 ```Python
 data_stream = ... # create a source data stream
 data_stream.flat_map(Splitter) \
@@ -50,6 +38,7 @@ data_stream.flat_map(Splitter) \
 ```
 
 The Table API instead is a programming interface for working with streams of data in a tabular format. It allows to express complex stream processing queries using a SQL-like syntax:
+
 ```Python
 source_table = ... # create a source table
 source_table.flat_map(Splitter).alias('word') \
@@ -60,6 +49,17 @@ source_table.flat_map(Splitter).alias('word') \
 ```
 
 DataStream API is more generic and allows more control over streams especially with custom functions, while the Table API is more expressive and easier to use. The Table API is built on top of the DataStream API, so it is possible to convert a Table into a DataStream and vice versa.
+
+### Windowing
+Flink has also the concept of windows, which allow you to process data over a fixed period of time, or you can define some custom function (like events count). There are four type of built-in windows:
+- `Tumbling Window`: these windows are fixed-size, non-overlapping windows that are created based on a fixed time interval or number of events. For example, a tumbling window of 5 seconds the current window will be evaluated every 5 seconds and will contain the last 5 seconds of data.
+- `Sliding Window`: simular to the tumbling window but these windows are also allowed to overlap. You can specify the size of the window and the interval at which the windows slide. 
+- `Session Window`: these windows group data into sessions based on the time that has passed since the last event. You can specify a maximum gap between events, and any events that fall within that gap will be placed in the same session.
+- `Global Window`: a window that contains all the events in the stream.
+
+<p align="center">
+    <img src="img/windowing.svg">
+</p>
 
 ### Flink Architecture
 Flink is a distributed system that can run on a cluster of machines. It is composed by three main components:
@@ -102,6 +102,33 @@ More graphically:
 <p align="center">
     <img src="img/datastream_example_job_graph.svg">
 </p>
+
+## Set up a Flink cluster
+A Flink cluster is composed by a JobManager and one or more TaskManagers. During the development is possible to run a Flink Job locally on a single machine where the JobManager and TaskManager are running in the same JVM. The JobManager will have a single task slot and all tasks of the Flink job will be executed on this single task slot. This is the default mode of execution when you run a Flink application from the IDE.
+
+### Standalone cluster
+Download the `1.16.0` version of Flink from the [official website](https://www.apache.org/dyn/closer.lua/flink/flink-1.16.0/flink-1.16.0-bin-scala_2.12.tgz) and unzip it. Then, go to the `bin` folder and run the following command to start a Flink cluster:
+```bash
+./start-cluster.sh
+```
+The cluster will be started on the local machine and it will be accessible at `localhost:8081`. There is a file where you can configure ports, hostnames, slots, etc. called `conf/flink-conf.yaml`.
+
+The cluster can be stopped by running the following command also from the `bin` folder:
+```bash
+./stop-cluster.sh
+```
+
+### Docker cluster
+The project includes a docker-compose.yml file that enables you to run a Flink cluster on Docker, making it easier to set up on any machine. The cluster consists of a JobManager and one TaskManager with five available slots. You can modify the `docker-compose.yml` file to adjust settings such as the number of slots and TaskManagers. To start the cluster, run the following command:
+```bash
+docker-compose build
+docker-compose up
+```
+The cluster will be started on the local machine and it will be accessible at `localhost:8081`, like the standalone cluster. The cluster can be stopped by running the following command:
+```bash
+docker-compose down
+```
+It was somewhat challenging to build the Docker image, as I initially couldn't find a stable and supported image for PyFlink. In fact, the `Dockerfile` includes extra instructions for installing PyFlink on top of the Flink image ([flink:1.16.0-scala_2.12-java11](https://hub.docker.com/_/flink)).
 
 ## Project structure
 
