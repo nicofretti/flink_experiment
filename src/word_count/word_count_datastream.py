@@ -22,8 +22,6 @@ if __name__ == "__main__":
     output_path = os.path.join(current_dir, "../output/")
     # Init environment
     d_env = StreamExecutionEnvironment.get_execution_environment()
-    d_env.set_runtime_mode(RuntimeExecutionMode.BATCH)
-    d_env.set_parallelism(1)
     # Read from csv file
     csv_input_schema = CsvSchema.builder() \
         .add_string_column("author") \
@@ -52,5 +50,3 @@ if __name__ == "__main__":
         CsvBulkWriters.for_schema(csv_output_schema)).build()
     )
     d_env.execute()
-
-# 6m 15s
