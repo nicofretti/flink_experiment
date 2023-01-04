@@ -84,6 +84,6 @@ public class BestDayOfWeek {
             .build();
     // Writing the result, the parallelism is 1 to avoid multiple files
     result.rebalance().sinkTo(sink).setParallelism(1);
-    env.execute("Q1: When is the best day of the week to fly to minimise delays?");
+    env.execute("Q1");
   }
 }

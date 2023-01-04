@@ -272,9 +272,55 @@ you,11577
 The development of the application was difficult, and after trying to fix the dependency error, I decided to switch from Python to Java for future tasks. Upon comparing the performance of the two APIs in local mode, the `Table API` proved to be significantly faster than the `DataStream API`, as shown by the following timings:
 ```bash
 # Table API
-time    ~ 0m10s
+time ~ 0m10s
 # DataStream API
-time    ~ 6m15s
+time ~ 6m15s
 ```
 Given that the dataset is in tabular format and being processed in batch mode, the `Table API` is the most suitable choice due to its optimization for this type of data.
 
+## Data Expo 2009
+
+The second part of the project utilizes a dataset from the Data Expo 2009 challenge organized by [Amstat](https://www.amstat.org/), which contains flight arrival and departure information for commercial flights from 1987 to 2008. For simplicity, only the data from the last three years of the dataset (2005, 2006, and 2007) is being used, which is stored in the files `2005.csv`, `2006.csv`, and `2007.csv`. The dataset is quite large, with a size of 12 gigabytes when uncompressed, and contains 29 columns of data, with information about the flights such as the departure and arrival times, the carriers operating the flights, and the origin and destination airports. The American Statistical Association (ASA) has challenged researchers to provide a graphical summary of the data for a set of given queries using this dataset. You can find more information about the columns in the dataset in the [Harvard metadata](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/HG7NV7). 
+
+The queries that we will be answering are the following:
+
+- **Q1**: When is the best time of the week to fly to minimise delays ?
+- **Q2**: Do older planes suffer more delays?
+- **Q3**: How does the number of people flying between different locations change over time?
+- **Q4**: Can you detect cascading failures as delays in one airport create delays in others? Are there critical links in the system?
+
+### Dataset explanation
+Not all the columns of the dataset are relevant for the queries, so we will only use the following columns:
+- `Year`: The year of the flight
+- `Month`: The month of the flight
+- `DayofMonth`: The day of the month of the flight
+- `DayOfWeek`: The day of the week of the flight (1 = Monday, 2 = Tuesday, etc.)
+- `DepTime`: Actual departure time (%H%M format)
+- `TailNum`: Unique tail number to identify the plane (also used to join with plane-data.csv)
+- `ActualElapsedTime`: Difference between ArrTime and DepTime in minutes
+- `CRSElapsedTime`: Difference between CRSArrTime and CRSDepTime in minutes (where CRS stands for "scheduled")
+- `Origin`: Unique IATA airport code that flight was departed from, can be identified in airports.csv
+- `Dest`: Unique IATA airport code for flight destination, can be identified in airports.csv
+
+To answer the queries, we will need to join the dataset with the `plane-data.csv` and `airports.csv` files, which contain information about the planes and the airports, respectively. From the two join operations, we will only use the following columns:
+- `plane-data.csv`: 
+  - `tailnum`: Unique tail number to identify the planes in plane-data.csv
+  - `year`: Year of manufacture
+- `airports.csv`: 
+  - `iata`: Unique IATA airport code
+  - `state`: State of the airport
+
+### Set up the socket server
+
+The goal of this project is to explore the use of Apache Flink for data streaming. To do this, we will be using the DataStream API to process the data. The dataset files can be found in the datasets' folder, and we can use the Python script `src/tools/socket_with_pandas.py` to create a socket server that will send the data to the Flink cluster. This script also utilizes the pandas library to read the CSV files, perform a join, and perform ETL (Extract, Transform, Load) operations to convert the data into a more suitable format for the Flink cluster. By default, the script will listen on port 8888 and, after the first connection, will send all the data through the socket in chunks of 2000000 rows (this means that it will take just four iterations to send an entire file). The script can be run with the following command:
+
+```bash
+cd src/tools
+python socket_with_pandas.py
+```
+Or defining custom parameters:
+```bash
+python socket_with_pandas.py --port 8000 --chunk_size 5000 -f "../datasets/2005.csv" "../datasets/2006.csv" 
+```
+
+### Q1 - When is the best time of the week to fly to minimise delays ?
