@@ -15,7 +15,7 @@ def setup_parser():
     parser.add_argument('-c', '--chunk', type=int, default=2000000,
                         help='The number of lines to send at once')
     parser.add_argument('-f', '--files', nargs='+',
-                        default=["../datasets/2005.csv", "../datasets/2006.csv", "../datasets/2007.csv"],
+                        default=["../datasets/2005.csv"],
                         help='The files to read')
 
     return parser.parse_args()
@@ -28,7 +28,6 @@ if __name__ == "__main__":
     listen_port = args.port
     chunk_size = args.chunk
     files = args.files
-    print(files)
     # Open files
     current_dir = os.path.dirname(os.path.realpath(__file__))
     df_airplanes = pd.read_csv("../datasets/plane-data.csv")

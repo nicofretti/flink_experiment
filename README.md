@@ -133,23 +133,30 @@ It was somewhat challenging to build the Docker image, as I initially couldn't f
 
 ### Run a Flink job
 To run a Flink job on the cluster, you need to submit the application to the JobManager. The application can be submitted in two ways:
-- `Command line`: you can submit the application by running the following command from the `bin` folder:
-    ```bash
-    ./flink run -c <main_class> <path_to_jar>
-    ```
-    If you are using the Docker cluster, you need to run open a new terminal inside the JobManager container and run the command from there:
-    ```bash
-    docker exec -it flink-jobmanager /bin/bash
-    # The command above will open a new terminal inside the JobManager container
-    flink run -c <main_class> <path_to_jar>
-    ```
-
-- `Web interface`: you can submit the application by uploading the jar file from the web interface at `localhost:8081`. The web interface does not support the PyFlink API, so you will need to run the job from the command line if you are using PyFlink.
+#### Command line 
+You can submit the application by running the following command from the `bin` folder:
+```bash
+./flink run -c <main_class> <path_to_jar>
+```
+If you are using the Docker cluster, you need to run open a new terminal inside the JobManager container and run the command from there:
+```bash
+docker exec -it flink-jobmanager /bin/bash
+# The command above will open a new terminal inside the JobManager container
+flink run -c <main_class> <path_to_jar>
+```
 
 From default the `flink run` takes in input a jar file, but it is possible to pass a python file as well specifying the `--python` flag:
 ```bash
 ./flink run --python <path_to_python_file>
 ```
+#### Web interface
+You can submit the application by uploading the jar file from the web interface at `localhost:8081`. The web interface does not support the PyFlink API, so you will need to run the job from the command line if you are using PyFlink.
+
+<p align="center">
+    <img src="img/web_interface.png">
+</p>
+
+For this project the output of the queries will be put in a file, located in the same directory of the jar file.  After the load of the jar file, you can run the job by clicking on the `Submit`, but there is to specify the `EntryClass` that is different for each query later explained.
 
 ## Project structure
 
@@ -285,9 +292,13 @@ The second part of the project utilizes a dataset from the Data Expo 2009 challe
 The queries that we will be answering are the following:
 
 - **Q1**: When is the best time of the week to fly to minimise delays ?
+  - EntryClass: org.data.expo.BestDayOfWeek
 - **Q2**: Do older planes suffer more delays?
+  - EntryClass: org.data.expo.PlansSufferDelay
 - **Q3**: How does the number of people flying between different locations change over time?
+  - EntryClass: org.data.expo.PeopleFlyingBetweenLocations
 - **Q4**: Can you detect cascading failures as delays in one airport create delays in others? Are there critical links in the system?
+  - EntryClass: org.data.expo.CascadingDelays
 
 ### Dataset explanation
 Not all the columns of the dataset are relevant for the queries, so we will only use the following columns:
@@ -343,6 +354,11 @@ data_stream
     Types.POJO(DataExpoRow.class));
 ```
 The DataStream object, data_stream, is created either from the socket server or from a list of strings. The `assignTimestampsAndWatermarks` function assigns a timestamp to each event in the stream. This timestamp is used by the windowing operations, which generate a watermark for the events every two seconds. The `flatMap` operation converts the data from the stream into DataExpoRow objects, which are specified as the output type using `Types.POJO(DataExpoRow.class)` (where `POJO` is a built-in type for the custom classes as our case).
+
+Reminder:
+- Before run application to the Flink cluster, we need to set `DEBUG=false` in each class that we want to execute, otherwise the application will run in debug mode and will use a local environment.
+- The application must be build using `gradle build` and the jar file will be created in the `build/libs` folder.
+- The `EntryClass` is different for each query
 
 ### Q1 - When is the best time of the week to fly to minimise delays ?
 **Idea**: we have to compute the delay for each flight, which is the difference between the actual elapsed time and the scheduled elapsed time. Then we have to group the flights by day of the week and compute the average delay for each day. 
