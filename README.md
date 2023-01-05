@@ -300,7 +300,7 @@ The queries that we will be answering are the following:
 - **Q4**: Can you detect cascading failures as delays in one airport create delays in others? Are there critical links in the system?
   - EntryClass: org.data.expo.CascadingDelays
 
-### Dataset explanation
+### Dataset used columns
 Not all the columns of the dataset are relevant for the queries, so we will only use the following columns:
 - `Year`: The year of the flight
 - `Month`: The month of the flight
@@ -413,13 +413,14 @@ The window time must be set to a duration longer than the entire stream communic
 #### Result
 My result is stored in `results/q1.csv` and it looks like this:
 ```csv
-6,-5.60
-4,-2.72
-1,-3.58
-2,-3.85
-5,-3.05
-7,-4.37
-3,-3.39
+day,avg_delay
+6,-5.26
+4,-2.88
+7,-4.24
+3,-3.43
+1,-3.65
+5,-3.25
+2,-3.77
 ```
 The first column is the day of the week, and the second column is the average delay for that day. As we can see, the best day to fly is Thursday, while the worst day is Saturday.
 <p align="center">
@@ -487,7 +488,87 @@ With a small window the application will generate partial results for each windo
 #### Result
 My result is stored in `results/q2.csv` and it looks like this:
 ```csv
+age,avg_delay
 Old,-1.23
 New,-2.21
 ```
 As we can see, the average delay is lower for the new planes, but the difference is not significant.
+
+### Q3 - How does the number of people flying between different locations change over time?
+There are multiple airports located in various cities, so one approach to group them by states rather than individual cities. Then we have to define the impact of people flying, and in our case we will count the number of incoming and outgoing flights for each state on a monthly basis.
+
+**Idea**: to determine the number of incoming and outgoing flights for each state, we will create a tuple for the origin and destination of each flight, and then group these tuples by state, year, and month. This will allow us to calculate the total number of incoming and outgoing flights for each state monthly.
+```java
+SingleOutputStreamOperator<Tuple3<String, String, Integer>> data_stream_clean = 
+    data_stream.
+      map(
+        (v) ->
+            new Tuple3<>(
+                // Origin YYYY-MM State
+                String.format("%d-%d %s", v.year, v.month, v.origin_state_airport),
+                // Destination YYYY-MM State
+                String.format("%d-%d %s", v.year, v.month, v.dest_state_airport),
+                // Counter
+                1),
+        Types.TUPLE(Types.STRING, Types.STRING, Types.INT));
+// Calculation flight by origin
+DataStream<Tuple2<String, Integer>> result_by_origin =
+    data_stream_clean
+        .keyBy(value -> value.f0)
+        .window(TumblingEventTimeWindows.of(Time.seconds(2)))
+        .reduce((v1, v2) -> new Tuple3<>(v1.f0, "", v1.f2 + v2.f2))
+        .map((v) -> new Tuple2<>(v.f0, v.f2), Types.TUPLE(Types.STRING, Types.INT));
+// Calculation flight by destination
+DataStream<Tuple2<String, Integer>> result_by_destination =
+    data_stream_clean
+        .keyBy(value -> value.f1)
+        .window(TumblingEventTimeWindows.of(Time.seconds(2)))
+        .reduce((v1, v2) -> new Tuple3<>("", v1.f1, v1.f2 + v2.f2))
+        .map((v) -> new Tuple2<>(v.f1, v.f2), Types.TUPLE(Types.STRING, Types.INT));
+// Merge the two streams and sink the result
+final FileSink<Tuple2<String, Integer>> sink = ...; // Sink definition omitted for brevity
+result_by_origin
+    .union(result_by_destination)
+    .keyBy(value -> value.f0)
+    .window(TumblingEventTimeWindows.of(Time.seconds(process_time)))
+    .sum(1)
+    .sinkTo(sink)
+    .setParallelism(1);
+```
+
+#### Explanation
+
+1. The data_stream is transformed by applying a map function to each element. The function extracts three fields: the origin with the year and month of the flight and the state of the airport, the destination with the year and month of the flight and the state of the airport, and a counter set to 1.
+2. Now two streams are created, one for the origin and one for the destination. Each stream is partitioned by the origin or destination using the keyBy function and a window of two seconds is applied to each stream. The size of the window in this case can be arbitrary since there is a final window that will aggregate the results of the two streams.
+3. The two streams are merged using the union function and then partitioned by the origin or destination using the keyBy function. To avoid partial result the window size must be larger than the entire stream communication.
+
+#### Considerations
+The size of the window for grouping elements by origin and by destination can be set to any desired value. However, the final window must be large enough to encompass the entire stream. Otherwise, the partial results formed as tuples (state, year, month, count) must be further grouped by state, year, and month and the counts must be summed to obtain the final result.
+
+#### Result
+My result is stored in `results/q3.csv` and it looks like this:
+```csv
+year,month,state,flights
+2007,12,OR,12981
+2007,12,TX,129783
+2007,12,RI,4010
+2007,12,WI,10635
+2007,11,PA,26979
+2007,11,NV,35002
+2007,10,TX,134471
+2007,9,SD,1794
+2007,9,NV,34956
+...
+```
+
+Plotting the result in a heatmap we can see something like this:
+<p align="center">
+  <img src="img/plot_q3.png" alt="Q3 heatmap"/>
+</p>
+
+Where in the x-axis there is the state and in the y-axis there is the month. The color of each cell represents the number of flights. We can see that the number of flights is higher in the summer months and lower in the winter months. We can also see that the number of flights is higher in the states of California, and Texas. Also we can notice that Delaware (DE) seems that in some months there are no flights.
+For a better visualization of the data, I have normalized each column by the maximum value of the column. The result is the following:
+<p align="center">
+  <img src="img/plot_q3_normalized.png" alt="Q3 heatmap normalized"/>
+</p>
+The result is very different from the previous one, and we can spot more useful information.

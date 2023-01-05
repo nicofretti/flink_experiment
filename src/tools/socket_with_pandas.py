@@ -58,6 +58,5 @@ if __name__ == "__main__":
                 ]
             ).encode())
     # Close connections
-    # client.send("2005,4,27,3,2011.0,N565SW,0,450000000000000000,SBA,LAX,1998,CA,CA\n".encode())
     client.close()
     server.close()

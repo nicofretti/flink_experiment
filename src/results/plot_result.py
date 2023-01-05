@@ -38,11 +38,11 @@ def plot_q1_result(path):
 
 if __name__ == "__main__":
     # Read the data
-    plot = "q1"
+    plot = "q3"
     # Plot the data
     if plot == "q1":
         plot_q1_result("q1.csv")
-    if plot == "q2":
+    if plot == "q3":
         plot_q2_result("q3.csv")
 
     plt.show()

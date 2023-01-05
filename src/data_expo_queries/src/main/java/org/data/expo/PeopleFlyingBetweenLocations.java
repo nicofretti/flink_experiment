@@ -26,11 +26,17 @@ import static org.data.expo.utils.DataExpoMethods.get_environment;
 public class PeopleFlyingBetweenLocations {
   static boolean DEBUG = false;
 
+  static boolean SHOW_RESULT = true;
+
   public static void main(String[] args) throws Exception {
     // Init the environment
     StreamExecutionEnvironment env = get_environment(DEBUG);
     // Add the watermarking
     DataStream<String> data_stream = get_data_stream(env, DEBUG);
+    int process_time = 2; // Seconds of window
+    if (SHOW_RESULT) {
+      process_time = 3600;
+    }
 
     SingleOutputStreamOperator<Tuple3<String, String, Integer>> data_stream_clean =
         data_stream
@@ -92,12 +98,11 @@ public class PeopleFlyingBetweenLocations {
     result_by_origin
         .union(result_by_destination)
         .keyBy(value -> value.f0)
-        .window(TumblingEventTimeWindows.of(Time.seconds(200)))
+        .window(TumblingEventTimeWindows.of(Time.seconds(process_time)))
         .sum(1)
+        .rebalance()
         .sinkTo(sink)
         .setParallelism(1);
-    ;
-    env.execute(
-        "Q3: How does the number of people flying between different locations change over?");
+    env.execute("Q3");
   }
 }
