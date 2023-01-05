@@ -25,7 +25,10 @@ import static org.data.expo.utils.DataExpoMethods.get_environment;
 
 // Q1: When is the best day of the week to fly to minimise delays?
 public class BestDayOfWeek {
+  // Debug mode
   static boolean DEBUG = false;
+
+  // If set true the final result will be computed otherwise the intermediate results
   static boolean SHOW_RESULT = true;
 
   public static void main(String[] args) throws Exception {

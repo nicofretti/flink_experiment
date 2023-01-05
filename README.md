@@ -363,6 +363,7 @@ Reminder:
 ### Q1 - When is the best time of the week to fly to minimise delays ?
 **Idea**: we have to compute the delay for each flight, which is the difference between the actual elapsed time and the scheduled elapsed time. Then we have to group the flights by day of the week and compute the average delay for each day. 
 ```java
+// File: org.data.expo.BestDayOfWeek
 data_stream.map(
     (MapFunction<DataExpoRow, Tuple3<Integer, Integer, Integer>>)
         (value) -> {
@@ -401,9 +402,23 @@ env.execute("Q1");
 #### Explanation
 1.  The data_stream is transformed into a new stream by applying a map function to each element. The function extracts three fields: the day of the week, the difference between the actual elapsed time and the scheduled elapsed time, and a counter set to 1.
 2. The stream is partitioned by day of the week using the keyBy function.
-3. The stream is windowed using the window function with a tumbling event-time window of the specified process time in seconds. To see the final result, the window time must be set larger than the entire stream communication time, otherwise a partial result will be calculated.
+3. The stream is windowed using the window function with a tumbling event-time window of the specified process time in seconds. To see the final result, the window time must be set larger than the entire stream communication time, otherwise a partial result will be calculated (in the code set `SHOW_RESULT=true`).
 4. The reduce function is applied to the windowed stream, which combines the elements in each window by adding their second and third fields (the elapsed time difference and the counter) and creating a new tuple with the result.
 5. A sink is created using the FileSink class to output the tuples to a file. The sink is set up to roll over on checkpoints and is built using the build method.
 6. The stream is output to the sink using the sinkTo function, and the parallelism is set to 1 to avoid creating multiple files. On this phase the calculation is executed by dividing the elapsed time difference by the counter to get the average delay for each day of the week.
 
 #### Result
+My result is stored in `results/q1.csv` and it looks like this:
+```csv
+6,-5.60
+4,-2.72
+1,-3.58
+2,-3.85
+5,-3.05
+7,-4.37
+3,-3.39
+```
+The first column is the day of the week, and the second column is the average delay for that day. As we can see, the best day to fly is Thursday, while the worst day is Saturday.
+<p align="center">
+  <img src="img/plot_q1.png">
+</p>
