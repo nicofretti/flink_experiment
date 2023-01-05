@@ -24,7 +24,7 @@ As you can see in the example we can spot two type of operators:
 In Flink there are two main programming interface for working with streams of data: `DataStream API` and `Table API`.
 
 <p align="center">
-    <img width=400 src="img/levels_of_abstraction.svg">
+    <img width="400" src="img/levels_of_abstraction.svg">
 </p>
 
 The DataStream API is core API for working with streams of data. It allows to process streams in real-time and perform transformations using operators like `map`, `filter`, `join`, `aggregate` etc.
