@@ -22,13 +22,19 @@ import static org.data.expo.utils.DataExpoMethods.get_environment;
 
 // Q2: Do older planes suffer more delays?
 public class PlansSufferDelay {
-  static boolean DEBUG = true;
+  static boolean DEBUG = false;
+
+  static boolean SHOW_RESULT = true;
 
   public static void main(String[] args) throws Exception {
     // Init the environment
     StreamExecutionEnvironment env = get_environment(DEBUG);
     // Set up the source
     DataStream<String> data_stream = get_data_stream(env, DEBUG);
+    int process_time = 2; // Seconds of window
+    if (SHOW_RESULT) {
+      process_time = 3600;
+    }
     // Create the result stream
     SingleOutputStreamOperator<Tuple3<String, Integer, Integer>> data_stream_clean =
         data_stream
@@ -51,7 +57,7 @@ public class PlansSufferDelay {
                   //    Standard aircraft = 10-20 years
                   //    New aircraft = 10 years or less
                   return new Tuple3<>(
-                      2007 - value.year_of_plane > 20 ? "Old" : "New",
+                      value.year - value.year_of_plane > 20 ? "Old" : "New",
                       value.actual_elapsed_time - value.crs_elapsed_time,
                       1);
                 },
@@ -60,7 +66,7 @@ public class PlansSufferDelay {
     DataStream<Tuple3<String, Integer, Integer>> result =
         data_stream_clean
             .keyBy(value -> value.f0)
-            .window(TumblingEventTimeWindows.of(Time.seconds(2)))
+            .window(TumblingEventTimeWindows.of(Time.seconds(process_time)))
             .reduce((i, j) -> new Tuple3<>(i.f0, i.f1 + j.f1, i.f2 + j.f2));
 
     final FileSink<Tuple3<String, Integer, Integer>> sink =
@@ -76,6 +82,6 @@ public class PlansSufferDelay {
             .build();
     // Writing the result, the parallelism is 1 to avoid multiple files
     result.rebalance().sinkTo(sink).setParallelism(1);
-    env.execute("Q2: Do older planes suffer more delays?");
+    env.execute("Q2");
   }
 }

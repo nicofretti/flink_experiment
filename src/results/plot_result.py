@@ -43,6 +43,6 @@ if __name__ == "__main__":
     if plot == "q1":
         plot_q1_result("q1.csv")
     if plot == "q2":
-        plot_q2_result("q2.csv")
+        plot_q2_result("q3.csv")
 
     plt.show()

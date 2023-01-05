@@ -15,7 +15,7 @@ def setup_parser():
     parser.add_argument('-c', '--chunk', type=int, default=2000000,
                         help='The number of lines to send at once')
     parser.add_argument('-f', '--files', nargs='+',
-                        default=["../datasets/2005.csv"],
+                        default=["../datasets/2005.csv", "../datasets/2006.csv", "../datasets/2007.csv"],
                         help='The files to read')
 
     return parser.parse_args()

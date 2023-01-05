@@ -400,12 +400,15 @@ env.execute("Q1");
 ```
 
 #### Explanation
-1.  The data_stream is transformed into a new stream by applying a map function to each element. The function extracts three fields: the day of the week, the difference between the actual elapsed time and the scheduled elapsed time, and a counter set to 1.
+1. The data_stream is transformed into a new stream by applying a map function to each element. The function extracts three fields: the day of the week, the difference between the actual elapsed time and the scheduled elapsed time, and a counter set to 1.
 2. The stream is partitioned by day of the week using the keyBy function.
 3. The stream is windowed using the window function with a tumbling event-time window of the specified process time in seconds. To see the final result, the window time must be set larger than the entire stream communication time, otherwise a partial result will be calculated (in the code set `SHOW_RESULT=true`).
 4. The reduce function is applied to the windowed stream, which combines the elements in each window by adding their second and third fields (the elapsed time difference and the counter) and creating a new tuple with the result.
 5. A sink is created using the FileSink class to output the tuples to a file. The sink is set up to roll over on checkpoints and is built using the build method.
 6. The stream is output to the sink using the sinkTo function, and the parallelism is set to 1 to avoid creating multiple files. On this phase the calculation is executed by dividing the elapsed time difference by the counter to get the average delay for each day of the week.
+
+#### Considerations
+The window time must be set to a duration longer than the entire stream communication time, otherwise the output will be a partial result. If the window time is set to a duration shorter than the communication time, the application will generate a result for each window and output it to the sink. Each partial result will be a tuple containing the average delay for each day of the week. The final result will be the average of all the partial results.
 
 #### Result
 My result is stored in `results/q1.csv` and it looks like this:
@@ -422,3 +425,69 @@ The first column is the day of the week, and the second column is the average de
 <p align="center">
   <img src="img/plot_q1.png">
 </p>
+
+### Q2 - Do older planes suffer more delays?
+```text
+Here are the approximate ages for an aircraft: 
+- Old aircraft = 20+ years.
+- Standard aircraft = 10-20 years. 
+- New aircraft = 10 years or less.
+```
+
+**Idea**: An old plane is a plane that is older than 20 years. So, we have to compute the delay for each flight, which is the difference between the actual elapsed time and the scheduled elapsed time. Then we have to group the flights by the age of the plane and compute the average delay for each age.
+
+```java
+// File: org.data.expo.PlansSufferDelay
+SingleOutputStreamOperator<Tuple3<String, Integer, Integer>> data_stream_clean = data_stream.
+map(
+    (value) -> {
+      // 0: plane age
+      // 1: delay calculation
+      // 2: counter of occurrences
+      return new Tuple3<>(
+          value.year - value.year_of_plane > 20 ? "Old" : "New",
+          value.actual_elapsed_time - value.crs_elapsed_time,
+          1);
+    },
+    Types.TUPLE(Types.STRING, Types.INT, Types.INT));
+// Setting up the window calculation
+DataStream<Tuple3<String, Integer, Integer>> result =
+data_stream_clean
+.keyBy(value -> value.f0)
+.window(TumblingEventTimeWindows.of(Time.seconds(process_time)))
+.reduce((i, j) -> new Tuple3<>(i.f0, i.f1 + j.f1, i.f2 + j.f2));
+
+final FileSink<Tuple3<String, Integer, Integer>> sink =
+FileSink.forRowFormat(
+    new Path("output"),
+    (Encoder<Tuple3<String, Integer, Integer>>)
+        (element, stream) ->
+            stream.write(
+                (String.format(
+                        "%s,%.2f\n", element.f0, (double) element.f1 / element.f2)
+                    .getBytes())))
+.withRollingPolicy(OnCheckpointRollingPolicy.build())
+.build();
+// Writing the result, the parallelism is 1 to avoid multiple files
+result.rebalance().sinkTo(sink).setParallelism(1);
+env.execute("Q2");
+```
+#### Explanation
+The execution is very simular to the previous query:
+1. The data_stream is transformed by applying a map function to each element. The function extracts three fields: if the plane is "Old" or "New" by calculating the difference between the date of the flight and the plane manufacture, the difference between the actual elapsed time and the scheduled elapsed time, and a counter set to 1.
+2. The stream is partitioned by plane age using the keyBy function.
+3. The stream is windowed using the window function with a tumbling event-time window of the specified process time in seconds (same as the previous query).
+4. The reduce function is applied to the windowed stream, which combines the elements in each window by adding their second and third fields (the elapsed time difference and the counter) and creating a new tuple with the result.
+5. A sink is created using the FileSink class to output the tuples to a file.
+6. The stream is output to the sink using the sinkTo function, on this phase the calculation is executed by dividing the elapsed time difference by the counter to get the average delay for each plane age.
+
+#### Considerations
+With a small window the application will generate partial results for each window. Each partial result is a tuple in the form `(age, avg_delay_window)`, which can be merged to obtain the final result by grouping the tuples by age and computing the average delay.
+
+#### Result
+My result is stored in `results/q2.csv` and it looks like this:
+```csv
+Old,-1.23
+New,-2.21
+```
+As we can see, the average delay is lower for the new planes, but the difference is not significant.
