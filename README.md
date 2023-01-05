@@ -323,4 +323,71 @@ Or defining custom parameters:
 python socket_with_pandas.py --port 8000 --chunk_size 5000 -f "../datasets/2005.csv" "../datasets/2006.csv" 
 ```
 
+### General architecture
+For every query, we first set up the environment by creating a StreamExecutionEnvironment and a DataStream from a socket server. The DEBUG attribute determines whether the application will run in debug mode or not. If it's in debug mode, the application will use a local environment and the stream will be created using a list of strings (see `DataExpoMethods` and `DataExpoDebug`) rather than coming from the socket server.
+
+Then there is a cast operation that converts the data from the socket into a `DataExpoRow` object, which is a class that contains the data of the flight:
+
+```java
+DataStream<String> data_stream = ...; // from socket server or list of strings
+
+data_stream
+  .assignTimestampsAndWatermarks(
+    WatermarkStrategy.<String>forBoundedOutOfOrderness(Duration.ofSeconds(2))
+      .withTimestampAssigner((event, timestamp) -> Instant.now().toEpochMilli()))
+  .flatMap(
+    (FlatMapFunction<String, DataExpoRow>)
+      (value, out) -> {
+        out.collect(new DataExpoRow(value));
+      },
+    Types.POJO(DataExpoRow.class));
+```
+The DataStream object, data_stream, is created either from the socket server or from a list of strings. The `assignTimestampsAndWatermarks` function assigns a timestamp to each event in the stream. This timestamp is used by the windowing operations, which generate a watermark for the events every two seconds. The `flatMap` operation converts the data from the stream into DataExpoRow objects, which are specified as the output type using `Types.POJO(DataExpoRow.class)` (where `POJO` is a built-in type for the custom classes as our case).
+
 ### Q1 - When is the best time of the week to fly to minimise delays ?
+**Idea**: we have to compute the delay for each flight, which is the difference between the actual elapsed time and the scheduled elapsed time. Then we have to group the flights by day of the week and compute the average delay for each day. 
+```java
+data_stream.map(
+    (MapFunction<DataExpoRow, Tuple3<Integer, Integer, Integer>>)
+        (value) -> {
+          // 0: day of week
+          // 1: delay calculation
+          // 2: counter of occurrences
+          return new Tuple3<>(
+              value.day_of_week, value.actual_elapsed_time - value.crs_elapsed_time, 1);
+        },
+    Types.TUPLE(Types.INT, Types.INT, Types.INT)); // Assign partitions by day of week
+// Setting up the window calculation
+DataStream<Tuple3<Integer, Integer, Integer>> result =
+    data_stream_clean
+        .keyBy(value -> value.f0)
+        .window(TumblingEventTimeWindows.of(Time.seconds(process_time)))
+        .reduce(
+            (ReduceFunction<Tuple3<Integer, Integer, Integer>>)
+                (i, j) -> new Tuple3<>(i.f0, i.f1 + j.f1, i.f2 + j.f2));
+// Creating the sink of output file
+final FileSink<Tuple3<Integer, Integer, Integer>> sink =
+    FileSink.forRowFormat(
+      new Path("output"),
+      (Encoder<Tuple3<Integer, Integer, Integer>>)
+          (element, stream) ->
+              stream.write(
+                  (String.format(
+                          "%d,%.2f\n", element.f0, ((double) element.f1 / element.f2))
+                      .getBytes())))
+  .withRollingPolicy(OnCheckpointRollingPolicy.build())
+  .build();
+// Writing the result, the parallelism is 1 to avoid multiple files
+result.rebalance().sinkTo(sink).setParallelism(1);
+env.execute("Q1");
+```
+
+#### Explanation
+1.  The data_stream is transformed into a new stream by applying a map function to each element. The function extracts three fields: the day of the week, the difference between the actual elapsed time and the scheduled elapsed time, and a counter set to 1.
+2. The stream is partitioned by day of the week using the keyBy function.
+3. The stream is windowed using the window function with a tumbling event-time window of the specified process time in seconds. To see the final result, the window time must be set larger than the entire stream communication time, otherwise a partial result will be calculated.
+4. The reduce function is applied to the windowed stream, which combines the elements in each window by adding their second and third fields (the elapsed time difference and the counter) and creating a new tuple with the result.
+5. A sink is created using the FileSink class to output the tuples to a file. The sink is set up to roll over on checkpoints and is built using the build method.
+6. The stream is output to the sink using the sinkTo function, and the parallelism is set to 1 to avoid creating multiple files. On this phase the calculation is executed by dividing the elapsed time difference by the counter to get the average delay for each day of the week.
+
+#### Result
