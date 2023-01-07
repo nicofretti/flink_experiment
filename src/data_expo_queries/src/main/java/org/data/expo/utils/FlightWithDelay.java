@@ -1,9 +1,7 @@
 package org.data.expo.utils;
 
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple4;
 
-import java.util.ArrayList;
 import java.util.Objects;
 
 public class FlightWithDelay implements Comparable<FlightWithDelay> {
@@ -12,8 +10,6 @@ public class FlightWithDelay implements Comparable<FlightWithDelay> {
   public String origin;
   public String destination;
   public int delay;
-  public int time_departure;
-  private ArrayList<Tuple2<String, Integer>> cascading_delays;
 
   @SuppressWarnings("unused")
   public FlightWithDelay() {}
@@ -29,8 +25,6 @@ public class FlightWithDelay implements Comparable<FlightWithDelay> {
     this.origin = origin;
     this.destination = destination;
     this.delay = delay;
-    this.cascading_delays = new ArrayList<>();
-    this.cascading_delays.add(new Tuple2<>(this.origin + " -> " + this.destination, this.delay));
   }
 
   public String get_id_for_origin() {
@@ -43,13 +37,6 @@ public class FlightWithDelay implements Comparable<FlightWithDelay> {
 
   public String get_origin_and_dest() {
     return String.format("[%s -> %s (%d)]", this.origin, this.destination, this.delay);
-  }
-
-  public void add_cascading_delay(FlightWithDelay f) {
-    this.cascading_delays.add(new Tuple2<>(f.origin + " -> " + f.destination, f.delay));
-    this.origin = f.origin;
-    this.destination = f.destination;
-    this.delay += f.delay;
   }
 
   @Override

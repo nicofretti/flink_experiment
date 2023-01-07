@@ -566,9 +566,83 @@ Plotting the result in a heatmap we can see something like this:
   <img src="img/plot_q3.png" alt="Q3 heatmap"/>
 </p>
 
-Where in the x-axis there is the state and in the y-axis there is the month. The color of each cell represents the number of flights. We can see that the number of flights is higher in the summer months and lower in the winter months. We can also see that the number of flights is higher in the states of California, and Texas. Also we can notice that Delaware (DE) seems that in some months there are no flights.
-For a better visualization of the data, I have normalized each column by the maximum value of the column. The result is the following:
+The x-axis represents the state and the y-axis represents the month. The color of each cell indicates the number of flights. The states of California and Texas appear to have a higher number of flights, while Delaware (DE) appears to have no flights in certain months. To improve the clarity of the data, I have normalized each column by its maximum value, as shown below:
 <p align="center">
   <img src="img/plot_q3_normalized.png" alt="Q3 heatmap normalized"/>
 </p>
-The result is very different from the previous one, and we can spot more useful information.
+This result is significantly different from the previous one and provides more useful information. For instance, we can see that February has a higher number of flights compared to other months, and that there is a drastic increase in the number of flights in Kentucky (KY) from December 2005.
+
+### Q4 - Can you detect cascading failures as delays in one airport create delays in others? Are there critical links in the system?
+**Idea**: z If a plane experiences a delay at one airport, we will assume that it will also experience a delay at its destination airport (since the destination of the initial flight must be the origin of the second flight) due to cascading failures.
+```java
+// File: org.data.expo.CascadingDelays
+SingleOutputStreamOperator<FlightWithDelay> data_stream_clean = 
+    data_stream.data.filter(
+                value ->
+                    !value.tail_num.equals("000000") & !value.tail_num.equals("0")
+                        && value.actual_elapsed_time - value.crs_elapsed_time < 0)
+            .map(
+                value ->
+                    new FlightWithDelay(
+                        value.tail_num,
+                        new Tuple4<>(value.year, value.month, value.day_of_month, value.dep_time),
+                        value.origin,
+                        value.dest,
+                        value.actual_elapsed_time - value.crs_elapsed_time));
+// Union of the stream to merge the cascading delays
+DataStream<FlightDelayAccumulator> result =
+    data_stream_clean
+        .keyBy(value -> value.plane)
+        .window(TumblingEventTimeWindows.of(Time.seconds(2)))
+        .aggregate(
+            new AggregateFunction<
+                FlightWithDelay, FlightDelayAccumulator, FlightDelayAccumulator>() {
+              @Override
+              public FlightDelayAccumulator createAccumulator() {
+                // Init can be avoid here since we don't have enough information
+                return null;
+              }
+
+              @Override
+              public FlightDelayAccumulator add(
+                  FlightWithDelay value, FlightDelayAccumulator accumulator) {
+                if (accumulator == null) {
+                  return new FlightDelayAccumulator(value);
+                }
+                accumulator.add_flight(value);
+                return accumulator;
+              }
+
+              @Override
+              public FlightDelayAccumulator getResult(FlightDelayAccumulator accumulator) {
+                return accumulator;
+              }
+
+              @Override
+              public FlightDelayAccumulator merge(
+                  FlightDelayAccumulator a, FlightDelayAccumulator b) {
+                if (a == null && b == null) {
+                  return null;
+                }
+                if (a == null) {
+                  return b;
+                }
+                if (b == null) {
+                  return a;
+                }
+                for (FlightWithDelay f : b.get_all_flights()) {
+                  a.add_flight(f);
+                }
+                return a;
+              }
+            });
+final FileSink<FlightDelayAccumulator> sink = ...; // Sink definition omitted for brevity
+// Writing the result, the parallelism is 1 to avoid multiple files
+result.rebalance().sinkTo(sink).setParallelism(1);
+```
+
+#### Explanation
+1. The data_stream is filtered to remove the flights with a tail number equal to 0 or 000000 and the flights with a delay. The remaining flights are mapped to a new data type FlightWithDelay that contains the tail number, the date and time of the flight, the origin and destination airports, and the delay.
+2. The stream is partitioned by the tail number of the plane and a window of two seconds is applied.
+3. The window is aggregated using the aggregate function. The accumulator is a FlightDelayAccumulator that can be see as a map foreach tail number. The map consist a sorted list of flights (order by time of departure) keyed by the day of the flight. So each new flight is added to the list of flights of the corresponding day. The accumulator is initialized with the first flight of the window. So at the end of the window, the accumulator contains all the flights of the plane in the window, grouped by day, and sorted by time of departure.
+4. 

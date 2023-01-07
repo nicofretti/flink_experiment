@@ -48,6 +48,20 @@ public class FlightDelayAccumulator {
     return str.toString();
   }
 
+  // Method to check and filter if the accumulator has a cascading delay
+  public boolean has_cascading_delays() {
+    boolean has_cascading_delays = false;
+    Map<Tuple3<Integer, Integer, Integer>, SortedSet<FlightWithDelay>> clean = new HashMap<>();
+    for (Tuple3<Integer, Integer, Integer> key : this.delays.keySet()) {
+      if (this.delays.get(key).size() > 1) {
+        has_cascading_delays = true;
+        clean.put(key, this.delays.get(key));
+      }
+    }
+    this.delays = clean;
+    return has_cascading_delays;
+  }
+
   public String to_csv() {
     StringBuilder str = new StringBuilder();
     for (Tuple3<Integer, Integer, Integer> key : this.delays.keySet()) {

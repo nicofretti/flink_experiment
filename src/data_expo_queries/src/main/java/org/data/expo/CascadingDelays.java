@@ -26,7 +26,7 @@ import static org.data.expo.utils.DataExpoMethods.get_environment;
 // Q4: Can you detect cascading failures as delays in one airport create delays in others?
 public class CascadingDelays {
 
-  static boolean DEBUG = true;
+  static boolean DEBUG = false;
 
   public static void main(String[] args) throws Exception {
     // Init the environment
@@ -99,12 +99,14 @@ public class CascadingDelays {
                     if (b == null) {
                       return a;
                     }
+                    System.out.println(a.plane + " " + b.plane);
                     for (FlightWithDelay f : b.get_all_flights()) {
                       a.add_flight(f);
                     }
                     return a;
                   }
-                });
+                })
+            .filter(FlightDelayAccumulator::has_cascading_delays);
     final FileSink<FlightDelayAccumulator> sink =
         FileSink.forRowFormat(
                 new Path("output"),
