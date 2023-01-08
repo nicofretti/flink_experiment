@@ -573,7 +573,12 @@ The x-axis represents the state and the y-axis represents the month. The color o
 This result is significantly different from the previous one and provides more useful information. For instance, we can see that February has a higher number of flights compared to other months, and that there is a drastic increase in the number of flights in Kentucky (KY) from December 2005.
 
 ### Q4 - Can you detect cascading failures as delays in one airport create delays in others? Are there critical links in the system?
-**Idea**: z If a plane experiences a delay at one airport, we will assume that it will also experience a delay at its destination airport (since the destination of the initial flight must be the origin of the second flight) due to cascading failures.
+> The United States Federal Aviation Administration (FAA) considers a flight to be delayed when it is 15 minutes later than its scheduled time.
+
+If a plane experiences a delay at one airport, we will assume that it will also experience a delay at its destination airport (since the destination of the initial flight must be the origin of the second flight) due to cascading failures.
+
+**Idea**: get all flights with a delay greater or equal to 15 minutes then group by plane and day of flight. If the result contains more than one flight and the flights are consecutive (the first flight destination is the second flight origin), then we have a cascading failure.
+
 ```java
 // File: org.data.expo.CascadingDelays
 SingleOutputStreamOperator<FlightWithDelay> data_stream_clean = 
@@ -635,14 +640,46 @@ DataStream<FlightDelayAccumulator> result =
                 }
                 return a;
               }
-            });
+            })
+            .filter(FlightDelayAccumulator::has_cascading_delays);;
 final FileSink<FlightDelayAccumulator> sink = ...; // Sink definition omitted for brevity
 // Writing the result, the parallelism is 1 to avoid multiple files
 result.rebalance().sinkTo(sink).setParallelism(1);
 ```
 
 #### Explanation
-1. The data_stream is filtered to remove the flights with a tail number equal to 0 or 000000 and the flights with a delay. The remaining flights are mapped to a new data type FlightWithDelay that contains the tail number, the date and time of the flight, the origin and destination airports, and the delay.
+1. The data_stream is filtered to remove the flights with a tail number equal to 0 or 000000 and the flights with a delay (15 minutes). The remaining flights are mapped to a new data type FlightWithDelay that contains the tail number, the date and time of the flight, the origin and destination airports, and the delay.
 2. The stream is partitioned by the tail number of the plane and a window of two seconds is applied.
 3. The window is aggregated using the aggregate function. The accumulator is a FlightDelayAccumulator that can be see as a map foreach tail number. The map consist a sorted list of flights (order by time of departure) keyed by the day of the flight. So each new flight is added to the list of flights of the corresponding day. The accumulator is initialized with the first flight of the window. So at the end of the window, the accumulator contains all the flights of the plane in the window, grouped by day, and sorted by time of departure.
-4. 
+4. Then the accumulator is filtered to keep only the flights that have a cascading delay. The filter is applied using the `has_cascading_delays` function. This function checks if in each day there is more than one flight and if the chain of flights is well-formed (the origin of the second flight is the destination of the first flight and so on) otherwise the chain is discarded.
+5. The result is written to a csv file using the sinkTo function.
+
+#### Considerations
+The size of the window can be arbitrarily decided, but it is to be taken into account that some cascading delays may not be found because flights on the same day are divided into two different windows. A solution can be to make the stream more intelligent by sending the data divided by day. Another consideration is that cascading delays that form between two consecutive days are not found, to solve this problem it would be necessary to remove the `has_cascading_delays` filter and analyze the stream obtained on a new window of size 2 days.
+
+#### Result
+The result is a csv file with the following format:
+```
+tail_num,year,month,day_of_month,result
+N327UA,2005,1,12,GEG ORD -17 ORD RIC -17 
+N325UA,2005,1,9,BUF ORD -16 ORD MHT -27 
+N325UA,2005,1,28,LGA ORD -20 ORD LGA -20 LGA ORD -27 
+N102UW,2005,1,8,LAX PHL -22 PHL DCA -17 
+N446UA,2005,1,8,LAS DEN -21 DEN MCO -21 
+N301UA,2005,1,19,EWR ORD -17 ORD DFW -25 
+N187UW,2005,1,3,LAX CLT -16 CLT PHL -16 
+N928UA,2005,1,10,SFO SLC -18 SLC ORD -16 ORD EWR -18 
+```
+Where the result is a string formed by triplets of the form `origin destination delay`. The file is not easy to read being also large in size, but it is possible to do some analysis such as:
+>"Which airports have the most flight delay problems?”
+
+<p align="center">
+  <img src="img/plot_q4_2005.png" width="400" title="Plot 2005">
+  <img src="img/plot_q4_2006.png" width="400" title="Plot 2006">
+  <img src="img/plot_q4_2007.png" width="400" title="Plot 2007">
+</p>
+
+Where in the x-axis there is the airport city and in the y-axis the number of cascading delays.
+
+## Conclusion
+This project was both interesting and challenging. Apache Flink is a great framework to work with, but in my view it is not yet as widely used as some other frameworks, which can make development take longer. While the results of the queries we ran could be improved, I had to set some limits on certain aspects in order to keep the project on track without unnecessarily complicating the code. The documentation for Apache Flink is extensive, but it can be hard to locate specific information without thoroughly reading through it. Additionally, the integration with Python appears to still be in a somewhat early stage. Despite these challenges, I found Flink to be a powerful tool for stream processing and would recommend it to others looking for a scalable solution.

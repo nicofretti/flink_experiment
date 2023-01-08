@@ -51,14 +51,35 @@ public class FlightDelayAccumulator {
   // Method to check and filter if the accumulator has a cascading delay
   public boolean has_cascading_delays() {
     boolean has_cascading_delays = false;
-    Map<Tuple3<Integer, Integer, Integer>, SortedSet<FlightWithDelay>> clean = new HashMap<>();
-    for (Tuple3<Integer, Integer, Integer> key : this.delays.keySet()) {
-      if (this.delays.get(key).size() > 1) {
+    boolean correct_cascading_delays;
+    Map<Tuple3<Integer, Integer, Integer>, SortedSet<FlightWithDelay>> real_delays =
+        new HashMap<>();
+
+    // Check if an array of delays has more than one element and if the flights are related (same
+    // origin and destination)
+    for (Tuple3<Integer, Integer, Integer> day : this.delays.keySet()) {
+      // If there is only one flight, we skip it
+      if (this.delays.get(day).size() <= 1) {
+        continue;
+      }
+      FlightWithDelay[] flights = this.delays.get(day).toArray(new FlightWithDelay[0]);
+      FlightWithDelay prev = flights[0];
+      correct_cascading_delays = true;
+      for (int i = 1; i < flights.length; i++) {
+        FlightWithDelay curr = flights[i];
+        if (!prev.destination.equals(curr.origin)) {
+          correct_cascading_delays = false;
+          break;
+        }
+        prev = curr;
+      }
+      if (correct_cascading_delays) {
+        // All ok
         has_cascading_delays = true;
-        clean.put(key, this.delays.get(key));
+        real_delays.put(day, this.delays.get(day));
       }
     }
-    this.delays = clean;
+    this.delays = real_delays;
     return has_cascading_delays;
   }
 

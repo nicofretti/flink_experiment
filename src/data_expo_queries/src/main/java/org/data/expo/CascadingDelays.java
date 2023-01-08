@@ -49,7 +49,7 @@ public class CascadingDelays {
             .filter(
                 value ->
                     !value.tail_num.equals("000000") & !value.tail_num.equals("0")
-                        && value.actual_elapsed_time - value.crs_elapsed_time < 0)
+                        && value.actual_elapsed_time - value.crs_elapsed_time <= -15)
             .map(
                 value ->
                     new FlightWithDelay(
