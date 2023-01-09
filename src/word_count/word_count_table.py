@@ -37,8 +37,7 @@ def split(line: Row):
 if __name__ == "__main__":
     # Define files path from the current directory
     file_input = "../datasets/QUOTE.csv"
-    file_output = "output/word_count_out.csv"
-    print(os.path)
+    file_output = "../results/word_count_table.csv"
     # Make dir output if it does not exist
     if not os.path.exists("output"):
         os.mkdir("output")
@@ -58,6 +57,6 @@ if __name__ == "__main__":
     source_table.flat_map(split).alias('word') \
         .group_by(col('word')) \
         .select(col('word'), lit(1).count.alias('count')) \
-        .to_pandas().to_csv(os.path.join(current_dir, file_output), index=False, header=False, )
+        .to_pandas().to_csv(os.path.join(current_dir, file_output), index=False, header=False)
         #.order_by(col('count').desc) \
 

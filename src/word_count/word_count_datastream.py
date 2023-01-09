@@ -19,9 +19,11 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.realpath(__file__))
     # Init input and output path
     input_path = os.path.join(current_dir, "../datasets/QUOTE.csv")
-    output_path = os.path.join(current_dir, "../output/")
+    output_path = os.path.join(current_dir, "output/")
     # Init environment
     d_env = StreamExecutionEnvironment.get_execution_environment()
+    d_env.set_runtime_mode(RuntimeExecutionMode.BATCH)
+    d_env.set_parallelism(1)
     # Read from csv file
     csv_input_schema = CsvSchema.builder() \
         .add_string_column("author") \
@@ -45,8 +47,10 @@ if __name__ == "__main__":
         .add_number_column("count", number_type=DataTypes.INT()) \
         .build()
     # Sink the result
-    ds.sink_to(FileSink.for_bulk_format(
-        output_path,
-        CsvBulkWriters.for_schema(csv_output_schema)).build()
-    )
+    ds \
+        .rebalance() \
+        .sink_to(FileSink.for_bulk_format(
+            output_path,
+            CsvBulkWriters.for_schema(csv_output_schema)).build()) \
+        .set_parallelism(1)
     d_env.execute()
