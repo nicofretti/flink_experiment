@@ -5,7 +5,50 @@ This project is an experiment with Apache Flink, a framework for distributed str
 
 Those two parts have been separated in two different folders after some difficulties with PyFlink. Apache Flink offers a lot of APIs for Python but there are still some limitations that make difficult to develop a project with it. So the queries of Data Expo 2009 dataset have been developed with Java, the most stable and supported API.
 
-[TOC]
+- [Flink Experiment](#flink-experiment)
+- [Apache Flink](#apache-flink)
+  * [Stream Processing](#stream-processing)
+  * [DataStream API and Table API](#datastream-api-and-table-api)
+  * [Windowing](#windowing)
+  * [Flink Architecture](#flink-architecture)
+  * [Execution environment](#execution-environment)
+- [Set up a Flink cluster](#set-up-a-flink-cluster)
+  * [Standalone cluster](#standalone-cluster)
+  * [Docker cluster](#docker-cluster)
+  * [Run a Flink job](#run-a-flink-job)
+    + [Command line](#command-line)
+      - [Using docker](#using-docker)
+    + [Web interface](#web-interface)
+- [Project structure](#project-structure)
+  * [Setting up the environment](#setting-up-the-environment)
+    + [Python with Conda](#python-with-conda)
+    + [Java JDK](#java-jdk)
+    + [Download datasets](#download-datasets)
+- [Word Count](#word-count)
+  * [Word Count DataStream API](#word-count-datastream-api)
+  * [Word Count Table API](#word-count-table-api)
+  * [Run and result](#run-and-result)
+- [Data Expo 2009](#data-expo-2009)
+  * [Dataset used columns](#dataset-used-columns)
+  * [Set up the socket server](#set-up-the-socket-server)
+  * [Environment and Socket](#environment-and-socket)
+  * [Q1 - When is the best time of the week to fly to minimise delays ?](#q1---when-is-the-best-time-of-the-week-to-fly-to-minimise-delays--)
+    + [Explanation](#explanation)
+    + [Considerations](#considerations)
+    + [Result](#result)
+  * [Q2 - Do older planes suffer more delays?](#q2---do-older-planes-suffer-more-delays-)
+    + [Explanation](#explanation-1)
+    + [Considerations](#considerations-1)
+    + [Result](#result-1)
+  * [Q3 - How does the number of people flying between different locations change over time?](#q3---how-does-the-number-of-people-flying-between-different-locations-change-over-time-)
+    + [Explanation](#explanation-2)
+    + [Considerations](#considerations-2)
+    + [Result](#result-2)
+  * [Q4 - Can you detect cascading failures as delays in one airport create delays in others?](#q4---can-you-detect-cascading-failures-as-delays-in-one-airport-create-delays-in-others-)
+    + [Explanation](#explanation-3)
+    + [Considerations](#considerations-3)
+    + [Result](#result-3)
+- [Conclusion](#conclusion)
 
 # Apache Flink
 Apache Flink is an open-source stream processing framework that can be used for processing unbounded and bounded data streams. It is a distributed system that can run on a cluster of machines, and it provides efficient, scalable, and fault-tolerant stream and batch data processing. Flink is written in Java and Scala, and it has a rich set of APIs for creating streaming data pipelines.
@@ -469,15 +512,15 @@ env.execute("Q1");
 ```
 
 ### Explanation
-1. The data_stream is transformed into a new stream by applying a map function to each element. The function extracts three fields: the day of the week, the difference between the actual elapsed time and the scheduled elapsed time, and a counter set to 1.
-2. The stream is partitioned by day of the week using the keyBy function.
-3. The stream is windowed using the window function with a tumbling event-time window of the specified process time in seconds. To see the final result, the window time must be set larger than the entire stream communication time, otherwise a partial result will be calculated (in the code set `SHOW_RESULT=true`).
-4. The reduce function is applied to the windowed stream, which combines the elements in each window by adding their second and third fields (the elapsed time difference and the counter) and creating a new tuple with the result.
-5. A sink is created using the FileSink class to output the tuples to a file. The sink is set up to roll over on checkpoints and is built using the build method.
-6. The stream is output to the sink using the sinkTo function, and the parallelism is set to 1 to avoid creating multiple files. On this phase the calculation is executed by dividing the elapsed time difference by the counter to get the average delay for each day of the week.
+1. The `data_stream` is transformed into a new stream by applying a `map` function to each element. The function extracts three fields: the day of the week, the difference between the actual elapsed time and the scheduled elapsed time, and a counter set to 1.
+2. The stream is partitioned by day of the week using the `keyBy` function.
+3. The stream is windowed using the window function with a tumbling event-time window of the specified `process_time` in seconds. To see the final result, the window time must be set larger than the entire stream communication time, otherwise a partial result will be calculated (in the code set `SHOW_RESULT=true` to set a large window).
+4. The `reduce` function is applied to the windowed stream, which combines the elements in each window by adding their second and third fields (the elapsed time difference and the counter) and creating a new tuple with the result.
+5. A sink is created using the FileSink class to output the tuples to a file. The sink is set up to roll over on checkpoints and is built using the build method. With this policy, the sink will roll over to a new file on every checkpoint, which is the default behavior. In our case the checkpoint is defined by the window time.
+6. The stream is written to the sink using the `sinkTo` function, and the parallelism is set to 1 to avoid creating multiple files. On this phase the calculation is executed by dividing the elapsed time difference by the counter to get the average delay for each day of the week. The `rebalance` is called to make sure that the sink is executed by a single task.
 
 ### Considerations
-The window time must be set to a duration longer than the entire stream communication time, otherwise the output will be a partial result. If the window time is set to a duration shorter than the communication time, the application will generate a result for each window and output it to the sink. Each partial result will be a tuple containing the average delay for each day of the week. The final result will be the average of all the partial results.
+The window time must be set to a duration longer than the entire stream communication time, otherwise the output will be a partial result. If the window time is set to a duration shorter than the communication time, the application will generate a result for each window and output it to the sink. Each partial result will be a tuple containing the average delay for each day of the week. The final result can be still computed from the partial result by grouping them by day of week and averaging the result.
 
 ### Result
 My result is stored in `results/q1.csv` and it looks like this:
@@ -497,14 +540,12 @@ The first column is the day of the week, and the second column is the average de
 </p>
 ## Q2 - Do older planes suffer more delays?
 
-```text
-Here are the approximate ages for an aircraft: 
-- Old aircraft = 20+ years.
-- Standard aircraft = 10-20 years. 
-- New aircraft = 10 years or less.
-```
+> Here are the approximate ages for an aircraft: 
+  - Old aircraft = 20+ years.
+  - Standard aircraft = 10-20 years. 
+  - New aircraft = 10 years or less.
 
-**Idea**: An old plane is a plane that is older than 20 years. So, we have to compute the delay for each flight, which is the difference between the actual elapsed time and the scheduled elapsed time. Then we have to group the flights by the age of the plane and compute the average delay for each age.
+**Idea**: an old plane is a plane that is older than 20 years. So, we have to compute the delay for each flight, which is the difference between the actual elapsed time and the scheduled elapsed time. Then we have to group the flights by the age of the plane and compute the average delay for each age.
 
 ```java
 // File: org.data.expo.PlansSufferDelay
@@ -544,12 +585,12 @@ env.execute("Q2");
 ```
 ### Explanation
 The execution is very simular to the previous query:
-1. The data_stream is transformed by applying a map function to each element. The function extracts three fields: if the plane is "Old" or "New" by calculating the difference between the date of the flight and the plane manufacture, the difference between the actual elapsed time and the scheduled elapsed time, and a counter set to 1.
-2. The stream is partitioned by plane age using the keyBy function.
+1. The `data_stream` is transformed by applying a map function to each element. The function extracts three fields: if the plane is "Old" or "New" by calculating the difference between the date of the flight and the plane manufacture, the difference between the actual elapsed time and the scheduled elapsed time, and a counter set to 1.
+2. The stream is partitioned by plane age using the `keyBy` function.
 3. The stream is windowed using the window function with a tumbling event-time window of the specified process time in seconds (same as the previous query).
-4. The reduce function is applied to the windowed stream, which combines the elements in each window by adding their second and third fields (the elapsed time difference and the counter) and creating a new tuple with the result.
-5. A sink is created using the FileSink class to output the tuples to a file.
-6. The stream is output to the sink using the sinkTo function, on this phase the calculation is executed by dividing the elapsed time difference by the counter to get the average delay for each plane age.
+4. The `reduce` function is applied to the windowed stream, which combines the elements in each window by adding their second and third fields (the elapsed time difference and the counter) and creating a new tuple with the result.
+5. A sink is created using the `FileSink` class to output the tuples to a file.
+6. The stream is output to the sink using the `sinkTo` function, on this phase the calculation is executed by dividing the elapsed time difference by the counter to get the average delay for each plane age.
 
 ### Considerations
 With a small window the application will generate partial results for each window. Each partial result is a tuple in the form `(age, avg_delay_window)`, which can be merged to obtain the final result by grouping the tuples by age and computing the average delay.
@@ -568,6 +609,7 @@ There are multiple airports located in various cities, so one approach to group 
 
 **Idea**: to determine the number of incoming and outgoing flights for each state, we will create a tuple for the origin and destination of each flight, and then group these tuples by state, year, and month. This will allow us to calculate the total number of incoming and outgoing flights for each state monthly.
 ```java
+// File: org.data.expo.PeopleFlyingBetweenLocations
 SingleOutputStreamOperator<Tuple3<String, String, Integer>> data_stream_clean = 
     data_stream.
       map(
@@ -607,12 +649,12 @@ result_by_origin
 
 ### Explanation
 
-1. The data_stream is transformed by applying a map function to each element. The function extracts three fields: the origin with the year and month of the flight and the state of the airport, the destination with the year and month of the flight and the state of the airport, and a counter set to 1.
-2. Now two streams are created, one for the origin and one for the destination. Each stream is partitioned by the origin or destination using the keyBy function and a window of two seconds is applied to each stream. The size of the window in this case can be arbitrary since there is a final window that will aggregate the results of the two streams.
-3. The two streams are merged using the union function and then partitioned by the origin or destination using the keyBy function. To avoid partial result the window size must be larger than the entire stream communication.
+1. The `data_stream` is transformed by applying a map function to each element. The function extracts three fields: the origin with the year and month of the flight and the state of the airport, the destination with the year and month of the flight and the state of the airport, and a counter set to 1.
+2. Now two streams are created, one for the origin and one for the destination. Each stream is partitioned by the origin or destination using the `keyBy `function and a window of two seconds is applied to each stream. The size of the window in this case can be arbitrary since there is a final window that will aggregate the results of the two streams.
+3. The two streams are merged using the `union` function and then partitioned by the origin or destination using the `keyBy` function. To avoid partial result the window size must be larger than the entire stream communication.
 
 ### Considerations
-The size of the window for grouping elements by origin and by destination can be set to any desired value. However, the final window must be large enough to encompass the entire stream. Otherwise, the partial results formed as tuples (state, year, month, count) must be further grouped by state, year, and month and the counts must be summed to obtain the final result.
+The window size for grouping elements by origin and destination can be set to any value, but it must be large enough to cover the entire stream. If the window is not large enough, the partial results (i.e. tuples of the form (state, year, month, count)) will need to be grouped by state, year, and month and the counts will need to be summed to get the final result.
 
 ### Result
 My result is stored in `results/q3.csv` and it looks like this:
@@ -635,7 +677,7 @@ Plotting the result in a heatmap we can see something like this:
   <img src="img/plot_q3.png" alt="Q3 heatmap"/>
 </p>
 
-The x-axis represents the state and the y-axis represents the month. The color of each cell indicates the number of flights. The states of California and Texas appear to have a higher number of flights, while Delaware (DE) appears to have no flights in certain months. To improve the clarity of the data, I have normalized each column by its maximum value, as shown below:
+The x-axis represents the state and the y-axis represents the month. The color of each cell indicates the number of flights. The states of California (CA) and Texas (TX) appear to have a higher number of flights, while Delaware (DE) appears to have no flights in certain months. To improve the clarity of the data, I have normalized each column by its maximum value, as shown below:
 <p align="center">
   <img src="img/plot_q3_normalized.png" alt="Q3 heatmap normalized"/>
 </p>
@@ -717,14 +759,14 @@ result.rebalance().sinkTo(sink).setParallelism(1);
 ```
 
 ### Explanation
-1. The data_stream is filtered to remove the flights with a tail number equal to 0 or 000000 and the flights with a delay (15 minutes). The remaining flights are mapped to a new data type FlightWithDelay that contains the tail number, the date and time of the flight, the origin and destination airports, and the delay.
-2. The stream is partitioned by the tail number of the plane and a window of two seconds is applied.
-3. The window is aggregated using the aggregate function. The accumulator is a FlightDelayAccumulator that can be see as a map foreach tail number. The map consist a sorted list of flights (order by time of departure) keyed by the day of the flight. So each new flight is added to the list of flights of the corresponding day. The accumulator is initialized with the first flight of the window. So at the end of the window, the accumulator contains all the flights of the plane in the window, grouped by day, and sorted by time of departure.
+1. The `data_stream` is filtered to remove the flights with a tail number equal to 0 or 000000 and the flights with a delay (15 minutes). The remaining flights are mapped to a new data type `FlightWithDelay` that contains the tail number, the date and time of the flight, the origin and destination airports, and the delay.
+2. The stream is partitioned with `keyBy` by the tail number of the plane with a window of two seconds.
+3. The window is aggregated using the `aggregate` function. The accumulator is a `FlightDelayAccumulator` that can be see as a map/dictionary for each tail number. The map/dictionary consist a sorted list of flights (order by time of departure) keyed by the day of the flight. So each new flight is added to the list of flights of the corresponding day. The accumulator is initialized with the first flight of the window with a new tail number not already defined. So at the end of the window, the accumulator contains all the flights of a plane in the window, grouped by day, and sorted by time of departure.
 4. Then the accumulator is filtered to keep only the flights that have a cascading delay. The filter is applied using the `has_cascading_delays` function. This function checks if in each day there is more than one flight and if the chain of flights is well-formed (the origin of the second flight is the destination of the first flight and so on) otherwise the chain is discarded.
-5. The result is written to a csv file using the sinkTo function.
+5. The result is written to a csv file using the `sinkTo` function.
 
 ### Considerations
-The size of the window can be arbitrarily decided, but it is to be taken into account that some cascading delays may not be found because flights on the same day are divided into two different windows. A solution can be to make the stream more intelligent by sending the data divided by day. Another consideration is that cascading delays that form between two consecutive days are not found, to solve this problem it would be necessary to remove the `has_cascading_delays` filter and analyze the stream obtained on a new window of size 2 days.
+The size of the window can be arbitrarily decided, but it is to be taken into account that some cascading delays may not be found because flights on the same day are divided into two different windows. A solution can be to make the stream more intelligent by sending the data divided by day. Another consideration is that cascading delays that are coming from two consecutive days are not found, to solve this problem it would be necessary to remove the `has_cascading_delays` filter and add a new window that contains flights by couple of days.
 
 ### Result
 The result is a csv file with the following format:
@@ -747,6 +789,7 @@ Where the result is a string formed by triplets of the form `origin destination 
   <img src="img/plot_q4_2006.png" width="400" title="Plot 2006">
   <img src="img/plot_q4_2007.png" width="400" title="Plot 2007">
 </p>
+
 
 Where in the x-axis there is the airport city and in the y-axis the number of cascading delays.
 

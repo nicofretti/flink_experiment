@@ -38,6 +38,9 @@ def plot_q1_result(path):
 
     # Make a barplot of the average delay on x-axis the day and on y-axis the average delay
     sns.barplot(x="day", y="avg_delay_minutes", data=df, ax=ax)
+    ax.set(xlabel='Day of week', ylabel='Average delay (minutes)')
+    # Set title of x-axis and y-axis
+
 
 
 def plot_q4_result(path):
@@ -82,7 +85,7 @@ def plot_q4_result(path):
 
 if __name__ == "__main__":
     # Read the data
-    plot = "q4"
+    plot = "q1"
     # Plot the data
     if plot == "q1":
         plot_q1_result("q1.csv")
