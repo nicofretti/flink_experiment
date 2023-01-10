@@ -54,7 +54,7 @@ Those two parts have been separated in two different folders after some difficul
 Apache Flink is an open-source stream processing framework that can be used for processing unbounded and bounded data streams. It is a distributed system that can run on a cluster of machines, and it provides efficient, scalable, and fault-tolerant stream and batch data processing. Flink is written in Java and Scala, and it has a rich set of APIs for creating streaming data pipelines.
 
 ## Stream Processing
-In Flink applications are composed of streaming dataflows that can be transformed using operators like `map`, `reduce`, `keyBy` etc. The dataflows form a directed acyclic graph (DAG) that start with one o more source and end with one or more sinks. The dataflows can be executed on a local machine or on a cluster of machines, and can be executed in a streaming or batch fashion.
+In Flink applications are composed of streaming dataflows that can be transformed using operators like `map`, `reduce`, `keyBy` etc. The dataflows form a directed acyclic graph (DAG) that start with one o more source and end with one or more sinks. The dataflows can be executed on a local machine or on a cluster of machines, and can be run in a streaming or batch fashion.
 <p align="center">
     <img src="img/parallel_dataflow.svg">
 </p>
@@ -64,13 +64,13 @@ As you can see in the example we can spot two type of operators:
 - **redistributing** operators, like `keyBy` or `rebalance`, that transform one input element into zero, one or more output elements.
 
 ## DataStream API and Table API
-In Flink there are two main programming interface for working with streams of data: `DataStream API` and `Table API`.
+In Flink there are two main programming interface for working with streams of data: **DataStream API** and **Table API**.
 
 <p align="center">
     <img width="400" src="img/levels_of_abstraction.svg">
 </p>
 
-The **DataStream API** is core API for working with streams of data. It allows to process streams in real-time and perform transformations using operators like `map`, `filter`, `join`, `aggregate` etc.:
+The **DataStream API** is core API for working with streams of data. It allows to process streams in real-time and perform transformations using operators like `map`, `filter`, `join`, `aggregate` etc.
 
 ```Python
 data_stream = ... # create a source data stream
@@ -217,7 +217,7 @@ docker-compose down
 It was somewhat challenging to build the Docker image, as I initially couldn't find a stable and supported image for PyFlink. In fact, the `Dockerfile` includes extra instructions for installing PyFlink on top of the Flink image ([flink:1.16.0-scala_2.12-java11](https://hub.docker.com/_/flink)).
 
 ## Run a Flink job
-To run a Flink job on the cluster, you need to submit the application to the JobManager. The application can be submitted in two ways:
+To run a Flink job on the cluster, you need to submit the application to the JobManager. The application can be submitted in two ways: Command line and Web Interface.
 ### Command line 
 You can submit the application by running the following command from the `bin` folder:
 ```bash
@@ -228,13 +228,13 @@ From default the `flink run` takes in input a jar file, but it is possible to pa
 ./flink run --python <path_to_python_file>
 ```
 #### Using docker
-If you are using the Docker cluster, you need to run open a new terminal inside the **JobManager** container and run the command from there:
+If you are using the Docker cluster, you need to run open a new terminal inside the <u>JobManager container</u> and run the command from there:
 ```bash
 docker exec -it flink-jobmanager /bin/bash
 # The command above will open a new terminal inside the JobManager container
 flink run -c <main_class> <path_to_jar>
 ```
-Another important note is that in the **JobManager** container there are two `volumes`:
+Another important note is that in the JobManager container there are two `volumes`:
 ```yaml
 ...
 volumes:
@@ -304,7 +304,7 @@ After downloading the datasets, we need to move them to the `src/datasets` folde
 │   │   └── QUOTE.csv
 ...
 ```
-Note: the directory datasets is copied in the docker image, so if you want to use the Docker cluster you need download all the datasets and then build the image.
+**Note**: the directory datasets is copied in the docker image, so if you want to use the Docker cluster you need download all the datasets and then build the image.
 
 # Word Count
 As first example, we will implement a word count application. The job has been developed in Python using the PyFlink. The application reads a text file and counts the number of occurrences of each word of the file `QUOTES.csv` located in the `datasets` folder. The python files are:
@@ -386,10 +386,10 @@ you,11577
 
 The development of those applications was difficult, and after trying to fix the dependency error, I decided to switch from Python to Java for future tasks. Upon comparing the performance of the two APIs in local mode, the Table API proved to be significantly faster than the DataStream API, as shown by the following timings:
 ```bash
-# Table API
-time ~ 0m10s
 # DataStream API
 time ~ 6m15s
+# Table API
+time ~ 0m10s
 ```
 Given that the dataset is in tabular format and being processed in batch mode, the Table API is the most suitable choice due to its optimization for this type of computations.
 
@@ -400,13 +400,13 @@ The second part of the project utilizes a dataset from the Data Expo 2009 challe
 The queries that we will be answering are the following:
 
 - **Q1**: When is the best time of the week to fly to minimise delays ?
-  - `EntryClass`: <u>org.data.expo.BestDayOfWeek</u>
+  - `EntryClass`: **org.data.expo.BestDayOfWeek**
 - **Q2**: Do older planes suffer more delays?
-  - `EntryClass`: <u>org.data.expo.PlansSufferDelay</u>
+  - `EntryClass`: **org.data.expo.PlansSufferDelay**
 - **Q3**: How does the number of people flying between different locations change over time?
-  - `EntryClass`: <u>org.data.expo.PeopleFlyingBetweenLocations</u>
+  - `EntryClass`: **org.data.expo.PeopleFlyingBetweenLocations**
 - **Q4**: Can you detect cascading failures as delays in one airport create delays in others? Are there critical links in the system?
-  - `EntryClass`: <u>org.data.expo.CascadingDelays</u>
+  - `EntryClass`: **org.data.expo.CascadingDelays**
 
 ## Dataset used columns
 Not all the columns of the dataset are relevant for the queries, so we will only use the following columns:
@@ -465,7 +465,8 @@ data_stream
 ```
 The DataStream object, `data_stream`, is created either from the socket server or from a list of strings. The `assignTimestampsAndWatermarks` function assigns a timestamp to each event in the stream (as defined above the events are divided in group of 2 seconds with the same timestamp). The `flatMap` operation converts the data from the stream into `DataExpoRow` objects, which are specified as the output type using `Types.POJO(DataExpoRow.class)` (where `POJO` is a built-in type for the custom classes as our case).
 
-Note:
+**Note**:
+
 - Before run application to the Flink cluster, we need to set `DEBUG=false` in each class that we want to execute, otherwise the application will run in debug mode and will use a local environment.
 - The application must be build using `gradle build` and the jar file will be created in the `build/libs` folder.
 - The `EntryClass` is different for each query
@@ -516,7 +517,7 @@ env.execute("Q1");
 2. The stream is partitioned by day of the week using the `keyBy` function.
 3. The stream is windowed using the window function with a tumbling event-time window of the specified `process_time` in seconds. To see the final result, the window time must be set larger than the entire stream communication time, otherwise a partial result will be calculated (in the code set `SHOW_RESULT=true` to set a large window).
 4. The `reduce` function is applied to the windowed stream, which combines the elements in each window by adding their second and third fields (the elapsed time difference and the counter) and creating a new tuple with the result.
-5. A sink is created using the FileSink class to output the tuples to a file. The sink is set up to roll over on checkpoints and is built using the build method. With this policy, the sink will roll over to a new file on every checkpoint, which is the default behavior. In our case the checkpoint is defined by the window time.
+5. A sink is created using the `FileSink` class to output the tuples to a file. The sink is set up to roll over on checkpoints. With this policy, the sink will roll over to a new file on every checkpoint, which is the default behavior. In our case the checkpoint is defined by the window time.
 6. The stream is written to the sink using the `sinkTo` function, and the parallelism is set to 1 to avoid creating multiple files. On this phase the calculation is executed by dividing the elapsed time difference by the counter to get the average delay for each day of the week. The `rebalance` is called to make sure that the sink is executed by a single task.
 
 ### Considerations
@@ -536,8 +537,9 @@ day,avg_delay
 ```
 The first column is the day of the week, and the second column is the average delay for that day. As we can see, the best day to fly is Thursday, while the worst day is Saturday.
 <p align="center">
-  <img src="img/plot_q1.png">
+  <img src="img/plot_q1.png" width=400>
 </p>
+
 ## Q2 - Do older planes suffer more delays?
 
 > Here are the approximate ages for an aircraft: 
@@ -545,7 +547,7 @@ The first column is the day of the week, and the second column is the average de
   - Standard aircraft = 10-20 years. 
   - New aircraft = 10 years or less.
 
-**Idea**: an old plane is a plane that is older than 20 years. So, we have to compute the delay for each flight, which is the difference between the actual elapsed time and the scheduled elapsed time. Then we have to group the flights by the age of the plane and compute the average delay for each age.
+**Idea**: an old plane is a plane that is older than 20 years. So, we have to compute the delay for each flight, which is the difference between the actual elapsed time and the scheduled elapsed time. Then we have to group the flights by the age of the plane (old or new) and compute the average delay for each age.
 
 ```java
 // File: org.data.expo.PlansSufferDelay
@@ -677,18 +679,18 @@ Plotting the result in a heatmap we can see something like this:
   <img src="img/plot_q3.png" alt="Q3 heatmap"/>
 </p>
 
-The x-axis represents the state and the y-axis represents the month. The color of each cell indicates the number of flights. The states of California (CA) and Texas (TX) appear to have a higher number of flights, while Delaware (DE) appears to have no flights in certain months. To improve the clarity of the data, I have normalized each column by its maximum value, as shown below:
+The x-axis represents the state and the y-axis represents the year and month. The color of each cell indicates the number of flights. The states of California (**CA**) and Texas (**TX**) appear to have a higher number of flights, while Delaware (**DE**) appears to have no flights in certain months. To improve the clarity of the data, I have normalized each column by its maximum value, as shown below:
 <p align="center">
   <img src="img/plot_q3_normalized.png" alt="Q3 heatmap normalized"/>
 </p>
-This result is significantly different from the previous one and provides more useful information. For instance, we can see that February has a higher number of flights compared to other months, and that there is a drastic increase in the number of flights in Kentucky (KY) from December 2005.
+This result is significantly different from the previous one and provides more useful information. For instance, we can see that February has a higher number of flights compared to other months, and that there is a drastic increase in the number of flights in Kentucky (**KY**) from December 2005.
 
 ## Q4 - Can you detect cascading failures as delays in one airport create delays in others?
 > The United States Federal Aviation Administration (FAA) considers a flight to be delayed when it is 15 minutes later than its scheduled time.
 
 If a plane experiences a delay at one airport, we will assume that it will also experience a delay at its destination airport (since the destination of the initial flight must be the origin of the second flight) due to cascading failures.
 
-**Idea**: get all flights with a delay greater or equal to 15 minutes then group by plane and day of flight. If the result contains more than one flight and the flights are consecutive (the first flight destination is the second flight origin), then we have a cascading failure.
+**Idea**: get all flights with a delay greater or equal to 15 minutes then group by plane and day of flight. If the result contains more than one flight and the flights are consecutive (the first flight destination is the second flight origin) then we have a cascading failure.
 
 ```java
 // File: org.data.expo.CascadingDelays
@@ -761,12 +763,12 @@ result.rebalance().sinkTo(sink).setParallelism(1);
 ### Explanation
 1. The `data_stream` is filtered to remove the flights with a tail number equal to 0 or 000000 and the flights with a delay (15 minutes). The remaining flights are mapped to a new data type `FlightWithDelay` that contains the tail number, the date and time of the flight, the origin and destination airports, and the delay.
 2. The stream is partitioned with `keyBy` by the tail number of the plane with a window of two seconds.
-3. The window is aggregated using the `aggregate` function. The accumulator is a `FlightDelayAccumulator` that can be see as a map/dictionary for each tail number. The map/dictionary consist a sorted list of flights (order by time of departure) keyed by the day of the flight. So each new flight is added to the list of flights of the corresponding day. The accumulator is initialized with the first flight of the window with a new tail number not already defined. So at the end of the window, the accumulator contains all the flights of a plane in the window, grouped by day, and sorted by time of departure.
-4. Then the accumulator is filtered to keep only the flights that have a cascading delay. The filter is applied using the `has_cascading_delays` function. This function checks if in each day there is more than one flight and if the chain of flights is well-formed (the origin of the second flight is the destination of the first flight and so on) otherwise the chain is discarded.
+3. The window is aggregated using the `aggregate` function. The accumulator is a `FlightDelayAccumulator` that can be see as a map/dictionary for each tail number. The map/dictionary consist a sorted list of flights (order by time of departure) keyed by the day of the flight. So each new flight is added to the list of flights of the corresponding day. The accumulator is initialized with the first flight of the window that has a new tail number not already defined. At the end of the window computation, the result will contain an accumulator for each tail number that includes all the flights of the plane that are in the window, grouped by day and sorted by time of departure.
+3. Then the accumulator is filtered to keep only the flights that have a cascading delay. The filter is applied using the `has_cascading_delays` function. This function checks if in each day there is more than one flight and if the chain of flights is well-formed (the origin of the second flight is the destination of the first flight and so on) otherwise the chain is discarded.
 5. The result is written to a csv file using the `sinkTo` function.
 
 ### Considerations
-The size of the window can be arbitrarily decided, but it is to be taken into account that some cascading delays may not be found because flights on the same day are divided into two different windows. A solution can be to make the stream more intelligent by sending the data divided by day. Another consideration is that cascading delays that are coming from two consecutive days are not found, to solve this problem it would be necessary to remove the `has_cascading_delays` filter and add a new window that contains flights by couple of days.
+The size of the window can be arbitrarily decided, but it is to be taken into account that some cascading delays may not be found because flights on the same day are divided into two different windows. A solution can be to make the stream more intelligent by sending the data divided by day. Another consideration is that cascading delays that occur across two consecutive days may not be detected. To address this issue, it may be necessary to remove the `has_cascading_delays` filter and create a new window that includes flights from two consecutive days. This can be achieved by defining a custom window function, rather than processing the data by time.
 
 ### Result
 The result is a csv file with the following format:
